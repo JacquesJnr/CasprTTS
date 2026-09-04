@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "quick-tts-mic"
+version = "0.1.0"
+description = "A keyboard-first TTS overlay for a PipeWire virtual microphone"
+requires-python = ">=3.11"
+
+[project.scripts]
+quick-tts-mic = "quick_tts_mic.app:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+
