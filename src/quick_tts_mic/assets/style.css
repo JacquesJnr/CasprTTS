@@ -16,6 +16,13 @@ window {
   color: @text;
 }
 
+label,
+.voice-switcher,
+.voice-switcher label,
+.voice-name {
+  font-family: "Adwaita Sans", "Noto Color Emoji";
+}
+
 .overlay-window {
   background: transparent;
 }
