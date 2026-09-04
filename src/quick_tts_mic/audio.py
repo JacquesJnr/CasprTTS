@@ -7,6 +7,7 @@ from dataclasses import dataclass
 
 
 VIRTUAL_SINK = "quick_tts_sink"
+VIRTUAL_SOURCE = "quick_tts_mic"
 
 
 class AudioError(RuntimeError):
@@ -27,42 +28,54 @@ class PipeWireRouter:
     """
 
     def __init__(self) -> None:
-        self._module_id: str | None = None
         self._lock = threading.Lock()
 
     @property
     def discord_source_name(self) -> str:
-        return f"{VIRTUAL_SINK}.monitor"
+        return VIRTUAL_SOURCE
 
     def ensure_virtual_mic(self) -> None:
         with self._lock:
-            module_ids = self._module_ids()
-            if module_ids:
+            sink_module_ids = self._module_ids(
+                "module-null-sink", f"sink_name={VIRTUAL_SINK}"
+            )
+            if sink_module_ids:
                 # Old prototype processes can leave server-side Pulse modules
                 # behind. Keep one canonical device and remove duplicates.
-                for module_id in module_ids[1:]:
+                for module_id in sink_module_ids[1:]:
                     self._unload(module_id)
-                return
-            result = subprocess.run(
-                [
-                    "pactl",
-                    "load-module",
+            else:
+                self._load_module(
                     "module-null-sink",
                     f"sink_name={VIRTUAL_SINK}",
-                    "sink_properties=device.description=QuickTTS_Microphone",
-                ],
-                text=True,
-                capture_output=True,
+                    "sink_properties=device.description=QuickTTS_Microphone_Output",
+                )
+
+            source_module_ids = self._module_ids(
+                "module-remap-source", f"source_name={VIRTUAL_SOURCE}"
             )
-            if result.returncode:
-                raise AudioError(result.stderr.strip() or "Could not create virtual microphone")
-            self._module_id = result.stdout.strip()
+            if source_module_ids:
+                for module_id in source_module_ids[1:]:
+                    self._unload(module_id)
+            else:
+                self._load_module(
+                    "module-remap-source",
+                    f"master={VIRTUAL_SINK}.monitor",
+                    f"source_name={VIRTUAL_SOURCE}",
+                    "source_properties=device.description=QuickTTS_Microphone device.class=sound",
+                )
 
     def close(self) -> None:
         with self._lock:
-            for module_id in self._module_ids():
+            # The remapped source depends on the null sink, so unload it first.
+            for module_id in self._module_ids(
+                "module-remap-source", f"source_name={VIRTUAL_SOURCE}"
+            ):
                 self._unload(module_id)
-            self._module_id = None
+            for module_id in self._module_ids(
+                "module-null-sink", f"sink_name={VIRTUAL_SINK}"
+            ):
+                self._unload(module_id)
 
     def outputs(self) -> list[AudioOutput]:
         result = subprocess.run(
@@ -107,7 +120,7 @@ class PipeWireRouter:
         )
         return result.returncode == 0
 
-    def _module_ids(self) -> list[str]:
+    def _module_ids(self, module_name: str, marker: str) -> list[str]:
         result = subprocess.run(
             ["pactl", "list", "short", "modules"],
             text=True,
@@ -115,12 +128,22 @@ class PipeWireRouter:
         )
         if result.returncode:
             return []
-        marker = f"sink_name={VIRTUAL_SINK}"
         return [
             line.split("\t", 1)[0]
             for line in result.stdout.splitlines()
-            if "module-null-sink" in line and marker in line
+            if module_name in line and marker in line
         ]
+
+    @staticmethod
+    def _load_module(module_name: str, *arguments: str) -> str:
+        result = subprocess.run(
+            ["pactl", "load-module", module_name, *arguments],
+            text=True,
+            capture_output=True,
+        )
+        if result.returncode:
+            raise AudioError(result.stderr.strip() or "Could not create virtual microphone")
+        return result.stdout.strip()
 
     @staticmethod
     def _unload(module_id: str) -> None:

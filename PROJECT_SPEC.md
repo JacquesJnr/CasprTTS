@@ -63,8 +63,9 @@ secondary surfaces; composing a message must stay instantaneous.
 ### Audio behavior
 
 - The app manages a PipeWire virtual microphone while it is running.
-- Discord consumes **Monitor of QuickTTS_Microphone**
-  (`quick_tts_sink.monitor`) as its input.
+- Discord consumes **QuickTTS_Microphone** (`quick_tts_mic`) as its input. This
+  normal remapped source is backed by `quick_tts_sink.monitor` so clients that
+  hide monitor-class sources still expose it.
 - Speech also plays through headphones by default.
 - Local monitoring can be disabled and its output device can be selected.
 - The virtual microphone receives TTS only; a physical microphone mix is not

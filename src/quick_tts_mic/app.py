@@ -6,6 +6,7 @@ from pathlib import Path
 import gi
 
 gi.require_version("Gtk", "4.0")
+gi.require_version("Gdk", "4.0")
 from gi.repository import Gdk, Gio, GLib, Gtk  # noqa: E402
 
 from .config import AppConfig
@@ -101,7 +102,7 @@ class QuickTtsApp(Gtk.Application):
         title.add_css_class("title-1")
         outer.append(title)
         outer.append(Gtk.Label(
-            label="Discord input: Monitor of QuickTTS_Microphone",
+            label="Discord input: QuickTTS_Microphone",
             xalign=0,
             selectable=True,
         ))

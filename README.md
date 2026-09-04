@@ -10,8 +10,8 @@ a PipeWire virtual microphone and, by default, mirrors them to your headphones.
 - Escape clears and hides the box.
 - Up/Down browse the last 25 messages from the current app session only.
 - Messages are spoken in order, with a configurable 0.5-second default delay.
-- The virtual microphone appears as **Monitor of QuickTTS_Microphone** in
-  Discord (`quick_tts_sink.monitor` internally).
+- The virtual microphone appears as **QuickTTS_Microphone** in Discord
+  (`quick_tts_mic` internally).
 - Errors produce desktop notifications in debug mode and are silent otherwise.
 - The application is started manually and remains active after Settings closes.
 
@@ -36,9 +36,9 @@ The repository is currently set up this way already. `--system-site-packages`
 lets the virtual environment use Omarchy's system-provided GTK/PyGObject while
 keeping Piper and test tooling local to this project.
 
-Choose the Piper `.onnx` model in Settings, then select **Monitor of
-QuickTTS_Microphone** as Discord's input device. Use **Open message box** to test
-before installing the shortcut.
+Choose the Piper `.onnx` model in Settings, then select
+**QuickTTS_Microphone** as Discord's input device. Use **Open message box** to
+test before installing the shortcut.
 
 For this development checkout, `en_GB-alan-medium` is downloaded into the
 ignored `data/voices/` directory and is discovered automatically. It is a
