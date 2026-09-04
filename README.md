@@ -1,4 +1,4 @@
-# Quick TTS Mic
+# Caspr TTS
 
 A keyboard-first TTS message box for Omarchy. It speaks queued messages through
 a PipeWire virtual microphone and, by default, mirrors them to your headphones.
@@ -43,6 +43,10 @@ test before installing the shortcut.
 For this development checkout, `en_GB-alan-medium` is downloaded into the
 ignored `data/voices/` directory and is discovered automatically. It is a
 temporary male English prototype voice, not a replacement for Microsoft James.
+The checkout also includes Piper's `en_GB-southern_english_female-low` model as
+the closest official female English option. Piper currently has no Australian
+English model, so Caspr labels it as British rather than implying an accent it
+does not have.
 
 ## Omarchy shortcut
 
@@ -51,7 +55,7 @@ unused. Then add this to `~/.config/hypr/bindings.lua`, replacing the repository
 path if needed:
 
 ```lua
-o.bind("SUPER + ALT + T", "Quick TTS", "/home/jacq/Work/quick-tts-mic/scripts/quick-tts-overlay")
+o.bind("SUPER + ALT + T", "Caspr TTS", "/home/jacq/Work/quick-tts-mic/scripts/quick-tts-overlay")
 ```
 
 Validate the change:
@@ -64,7 +68,7 @@ hyprctl configerrors
 If the shortcut is already assigned, add `hl.unbind("SUPER + ALT + T")` before
 the new binding and note what it previously did.
 
-This development checkout installs an app-menu entry named **Quick TTS Mic** in
+This development checkout installs an app-menu entry named **Caspr TTS** in
 `~/.local/share/applications/` and binds the overlay shortcut in the user's
 Omarchy `bindings.lua`. Both launch the project-local virtual environment.
 

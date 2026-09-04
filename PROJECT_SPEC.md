@@ -1,8 +1,8 @@
-# Quick TTS Mic — Project Spec
+# Caspr TTS — Project Spec
 
 ## Product intent
 
-Quick TTS Mic lets a person who does not use a physical microphone participate
+Caspr TTS lets a person who does not use a physical microphone participate
 in voice chat with minimal interruption. The core interaction is:
 
 > Press a shortcut, type one short message, press Enter, and return immediately
@@ -19,7 +19,7 @@ voice is **Microsoft James (English, Australia)**. The existing audio path works
 the painful part is repeatedly Alt-Tabbing into a full application window just
 to send a short spoken message.
 
-Quick TTS Mic removes that navigation cost. Audio routing and configuration are
+Caspr TTS removes that navigation cost. Audio routing and configuration are
 secondary surfaces; composing a message must stay instantaneous.
 
 ## Agreed interaction
@@ -84,7 +84,7 @@ secondary surfaces; composing a message must stay instantaneous.
 
 The Omarchy prototype exposes:
 
-- Piper model path
+- An exclusive installed-voice picker
 - Local headphone monitoring on/off
 - Local monitoring output device
 - Playback delay in seconds
@@ -95,6 +95,12 @@ The Omarchy prototype exposes:
 
 Later iterations should support shortcut recording rather than requiring a
 manual Hyprland edit.
+
+The message overlay exposes the same installed voices through a compact
+dropdown. The prototype voice set is Alan (British male, medium quality) and
+Southern English (British female, low quality). Piper has no official
+Australian English model; the downstream Windows version remains responsible
+for genuine Microsoft Australian voices.
 
 ## Visual design
 
@@ -110,6 +116,8 @@ manual Hyprland edit.
   for focus and primary actions.
 - Preserve legibility under Omarchy's compositor opacity and fractional display
   scaling.
+- Provide a compact voice dropdown directly in the message overlay. Changing it
+  updates the active default without adding another confirmation step.
 
 ## Architecture boundaries
 

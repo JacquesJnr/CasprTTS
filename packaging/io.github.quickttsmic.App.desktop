@@ -1,8 +1,8 @@
 [Desktop Entry]
 Type=Application
-Name=Quick TTS Mic
+Name=Caspr TTS
 GenericName=Text-to-speech microphone
-Comment=Send typed speech to a virtual microphone
+Comment=Give typed messages a voice
 Exec=/home/jacq/Work/quick-tts-mic/.venv/bin/quick-tts-mic
 Icon=audio-input-microphone
 Terminal=false

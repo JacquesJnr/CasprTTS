@@ -81,6 +81,12 @@ dropdown > button:focus {
   min-height: 34px;
 }
 
+.voice-switcher > button {
+  min-width: 190px;
+  padding: 7px 10px;
+  font-size: 12px;
+}
+
 button {
   color: @text;
   background: @surface0;
@@ -126,6 +132,23 @@ button.destructive-action {
   padding: 18px;
 }
 
+.voice-choice {
+  background: @crust;
+  border: 1px solid @surface0;
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.voice-choice:hover {
+  background: alpha(@surface0, 0.55);
+  border-color: @surface1;
+}
+
+.voice-name {
+  color: @text;
+  font-weight: 700;
+}
+
 .section-title {
   color: @text;
   font-size: 15px;
@@ -169,4 +192,3 @@ checkbutton check:checked {
   font-family: monospace;
   font-weight: 700;
 }
-
