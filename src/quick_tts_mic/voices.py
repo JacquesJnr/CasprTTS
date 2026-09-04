@@ -17,6 +17,7 @@ class VoiceOption:
 
 KNOWN_VOICES = {
     "en_GB-alan-medium": ("Alan", "British male · medium"),
+    "en_GB-jenny_dioco-medium": ("Jenny", "Irish female · medium"),
     "en_GB-southern_english_female-low": (
         "Southern English",
         "British female · low",
@@ -39,4 +40,3 @@ def discover_voices(current_model_path: str = "") -> list[VoiceOption]:
         )
         voices.append(VoiceOption(name=name, detail=detail, model_path=str(model)))
     return voices
-

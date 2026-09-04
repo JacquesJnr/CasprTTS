@@ -97,10 +97,11 @@ Later iterations should support shortcut recording rather than requiring a
 manual Hyprland edit.
 
 The message overlay exposes the same installed voices through a compact
-dropdown. The prototype voice set is Alan (British male, medium quality) and
-Southern English (British female, low quality). Piper has no official
-Australian English model; the downstream Windows version remains responsible
-for genuine Microsoft Australian voices.
+dropdown. The prototype voice set is Alan (British male, medium quality), Jenny
+(Irish female, medium quality; Piper model `jenny_dioco`), and Southern English
+(British female, low quality). Piper has no official Australian English model;
+the downstream Windows version remains responsible for genuine Microsoft
+Australian voices.
 
 ## Visual design
 
