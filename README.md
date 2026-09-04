@@ -44,7 +44,8 @@ For this development checkout, `en_GB-alan-medium` is downloaded into the
 ignored `data/voices/` directory and is discovered automatically. It is a
 temporary male English prototype voice, not a replacement for Microsoft James.
 The checkout also includes the `en_GB-jenny_dioco-medium` model, shown in Caspr
-as Jenny with Irish female voice metadata.
+as Jenny with Irish female voice metadata, plus `en_US-amy-medium`, shown as Amy
+with American female voice metadata.
 
 ## Omarchy shortcut
 
