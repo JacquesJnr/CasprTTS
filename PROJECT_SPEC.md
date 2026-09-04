@@ -96,6 +96,21 @@ The Omarchy prototype exposes:
 Later iterations should support shortcut recording rather than requiring a
 manual Hyprland edit.
 
+## Visual design
+
+- Use the Catppuccin Mocha palette shipped with Omarchy: base `#1e1e2e`,
+  mantle `#181825`, crust `#11111b`, text `#cdd6f4`, and blue `#89b4fa`.
+- Keep the overlay visually quiet and compact, with a single dominant input and
+  one primary action.
+- Use rounded, bordered surfaces rather than heavy shadows or gradients.
+- Present keyboard affordances in muted text so they remain discoverable
+  without competing with the message field.
+- Group Settings into three cards: Voice, Audio routing, and Behavior.
+- Use green only for healthy status, red only for destructive actions, and blue
+  for focus and primary actions.
+- Preserve legibility under Omarchy's compositor opacity and fractional display
+  scaling.
+
 ## Architecture boundaries
 
 The following concerns remain separate:

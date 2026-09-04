@@ -29,6 +29,7 @@ class QuickTtsApp(Gtk.Application):
 
     def do_startup(self) -> None:
         Gtk.Application.do_startup(self)
+        self._load_styles()
         # Startup only runs in the primary GApplication instance. Holding here
         # keeps that background process alive without trapping remote shortcut
         # invocations in their own invisible processes.
@@ -66,67 +67,134 @@ class QuickTtsApp(Gtk.Application):
 
     def _build_overlay(self) -> Gtk.ApplicationWindow:
         window = Gtk.ApplicationWindow(application=self, title="Quick TTS")
-        window.set_default_size(620, -1)
+        window.set_default_size(680, -1)
         window.set_resizable(False)
         window.set_hide_on_close(True)
+        window.add_css_class("overlay-window")
 
-        box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
-        box.set_margin_top(16)
-        box.set_margin_bottom(16)
-        box.set_margin_start(16)
-        box.set_margin_end(16)
+        shell = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
+        shell.add_css_class("overlay-shell")
+        shell.set_margin_top(10)
+        shell.set_margin_bottom(10)
+        shell.set_margin_start(10)
+        shell.set_margin_end(10)
+
+        heading = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+        icon = Gtk.Image.new_from_icon_name("audio-input-microphone-symbolic")
+        icon.set_pixel_size(18)
+        icon.add_css_class("brand-icon")
+        heading.append(icon)
+
+        heading_copy = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=1)
+        eyebrow = Gtk.Label(label="QUICK TTS", xalign=0)
+        eyebrow.add_css_class("eyebrow")
+        heading_copy.append(eyebrow)
+        hint = Gtk.Label(label="Type a message for voice chat", xalign=0)
+        hint.add_css_class("hint")
+        heading_copy.append(hint)
+        heading.append(heading_copy)
+        shell.append(heading)
+
+        compose = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
 
         self.entry = Gtk.Entry(placeholder_text="Type something to say…")
         self.entry.set_hexpand(True)
+        self.entry.add_css_class("message-entry")
         self.entry.connect("activate", self._send)
 
         key_controller = Gtk.EventControllerKey()
         key_controller.connect("key-pressed", self._overlay_key_pressed)
         self.entry.add_controller(key_controller)
 
-        send = Gtk.Button(label="Send")
+        send = Gtk.Button(label="Speak  ↵")
         send.add_css_class("suggested-action")
+        send.add_css_class("send-button")
         send.connect("clicked", self._send)
 
-        box.append(self.entry)
-        box.append(send)
-        window.set_child(box)
+        compose.append(self.entry)
+        compose.append(send)
+        shell.append(compose)
+
+        footer = Gtk.Label(label="↑↓ history    ·    Esc cancel", xalign=0)
+        footer.add_css_class("hint")
+        shell.append(footer)
+        window.set_child(shell)
         return window
 
     def _build_settings(self) -> Gtk.ApplicationWindow:
         window = Gtk.ApplicationWindow(application=self, title="Quick TTS Mic — Settings")
-        window.set_default_size(620, 440)
+        window.set_default_size(680, -1)
         window.set_hide_on_close(True)
 
-        outer = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=16)
-        outer.set_margin_top(24)
-        outer.set_margin_bottom(24)
-        outer.set_margin_start(24)
-        outer.set_margin_end(24)
+        outer = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=18)
+        outer.add_css_class("settings-root")
 
+        header = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=14)
+        header_icon = Gtk.Image.new_from_icon_name("audio-input-microphone-symbolic")
+        header_icon.set_pixel_size(24)
+        header_icon.add_css_class("brand-icon")
+        header.append(header_icon)
+
+        heading = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
         title = Gtk.Label(label="Quick TTS Mic", xalign=0)
-        title.add_css_class("title-1")
-        outer.append(title)
-        outer.append(Gtk.Label(
-            label="Discord input: QuickTTS_Microphone",
-            xalign=0,
-            selectable=True,
-        ))
+        title.add_css_class("title")
+        heading.append(title)
+        subtitle = Gtk.Label(label="A fast, keyboard-first voice for chat", xalign=0)
+        subtitle.add_css_class("subtitle")
+        heading.append(subtitle)
+        heading.set_hexpand(True)
+        header.append(heading)
 
-        grid = Gtk.Grid(column_spacing=14, row_spacing=14)
-        outer.append(grid)
+        status = Gtk.Label(label="●  READY")
+        status.add_css_class("status-pill")
+        status.set_valign(Gtk.Align.CENTER)
+        header.append(status)
+        outer.append(header)
+
+        voice_card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
+        voice_card.add_css_class("settings-card")
+        voice_title = Gtk.Label(label="Voice", xalign=0)
+        voice_title.add_css_class("section-title")
+        voice_card.append(voice_title)
+
+        model_label = Gtk.Label(label="Piper model", xalign=0)
+        model_label.add_css_class("field-label")
+        voice_card.append(model_label)
 
         model_entry = Gtk.Entry(text=self.config.model_path, hexpand=True)
-        grid.attach(Gtk.Label(label="Piper model (.onnx)", xalign=0), 0, 0, 1, 1)
-        grid.attach(model_entry, 1, 0, 1, 1)
-
+        model_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+        model_row.append(model_entry)
         browse = Gtk.Button(label="Browse…")
         browse.connect("clicked", self._browse_model, model_entry)
-        grid.attach(browse, 2, 0, 1, 1)
+        model_row.append(browse)
+        voice_card.append(model_row)
+        model_help = Gtk.Label(
+            label="Offline speech · en_GB-alan-medium for this prototype",
+            xalign=0,
+        )
+        model_help.add_css_class("field-help")
+        voice_card.append(model_help)
+        outer.append(voice_card)
+
+        audio_card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
+        audio_card.add_css_class("settings-card")
+        audio_title = Gtk.Label(label="Audio routing", xalign=0)
+        audio_title.add_css_class("section-title")
+        audio_card.append(audio_title)
+
+        device_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+        device_label = Gtk.Label(label="Discord input", xalign=0)
+        device_label.add_css_class("field-label")
+        device_label.set_hexpand(True)
+        device_row.append(device_label)
+        device_value = Gtk.Label(label="QuickTTS_Microphone", selectable=True)
+        device_value.add_css_class("shortcut-chip")
+        device_row.append(device_value)
+        audio_card.append(device_row)
 
         monitor = Gtk.CheckButton(label="Hear speech in headphones")
         monitor.set_active(self.config.local_monitor)
-        grid.attach(monitor, 1, 1, 2, 1)
+        audio_card.append(monitor)
 
         output_names = [""]
         output_labels = ["System default"]
@@ -135,26 +203,49 @@ class QuickTtsApp(Gtk.Application):
             output_labels.append(output.description)
         output_model = Gtk.StringList.new(output_labels)
         output_dropdown = Gtk.DropDown(model=output_model)
+        output_dropdown.set_hexpand(True)
         try:
             output_dropdown.set_selected(output_names.index(self.config.local_output))
         except ValueError:
             output_dropdown.set_selected(0)
-        grid.attach(Gtk.Label(label="Headphone output", xalign=0), 0, 2, 1, 1)
-        grid.attach(output_dropdown, 1, 2, 2, 1)
+        output_label = Gtk.Label(label="Headphone output", xalign=0)
+        output_label.add_css_class("field-label")
+        audio_card.append(output_label)
+        audio_card.append(output_dropdown)
+        outer.append(audio_card)
+
+        behavior_card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
+        behavior_card.add_css_class("settings-card")
+        behavior_title = Gtk.Label(label="Behavior", xalign=0)
+        behavior_title.add_css_class("section-title")
+        behavior_card.append(behavior_title)
+
+        behavior_grid = Gtk.Grid(column_spacing=16, row_spacing=12)
+        behavior_grid.set_column_homogeneous(False)
+        behavior_card.append(behavior_grid)
 
         delay = Gtk.SpinButton.new_with_range(0.0, 3.0, 0.1)
         delay.set_digits(1)
         delay.set_value(self.config.playback_delay_seconds)
-        grid.attach(Gtk.Label(label="Playback delay (seconds)", xalign=0), 0, 3, 1, 1)
-        grid.attach(delay, 1, 3, 2, 1)
+        delay_label = Gtk.Label(label="Playback delay", xalign=0)
+        delay_label.add_css_class("field-label")
+        behavior_grid.attach(delay_label, 0, 0, 1, 1)
+        behavior_grid.attach(delay, 1, 0, 1, 1)
+        seconds = Gtk.Label(label="seconds", xalign=0)
+        seconds.add_css_class("field-help")
+        behavior_grid.attach(seconds, 2, 0, 1, 1)
 
         debug = Gtk.CheckButton(label="Show debug error notifications")
         debug.set_active(self.config.debug_notifications)
-        grid.attach(debug, 1, 4, 2, 1)
+        behavior_grid.attach(debug, 0, 1, 3, 1)
 
         shortcut = Gtk.Label(label="SUPER + ALT + T", xalign=0, selectable=True)
-        grid.attach(Gtk.Label(label="Overlay shortcut", xalign=0), 0, 5, 1, 1)
-        grid.attach(shortcut, 1, 5, 2, 1)
+        shortcut.add_css_class("shortcut-chip")
+        shortcut_label = Gtk.Label(label="Overlay shortcut", xalign=0)
+        shortcut_label.add_css_class("field-label")
+        behavior_grid.attach(shortcut_label, 0, 2, 1, 1)
+        behavior_grid.attach(shortcut, 1, 2, 2, 1)
+        outer.append(behavior_card)
 
         buttons = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
         buttons.set_halign(Gtk.Align.END)
@@ -173,6 +264,7 @@ class QuickTtsApp(Gtk.Application):
 
         save.connect("clicked", save_settings)
         quit_button = Gtk.Button(label="Quit")
+        quit_button.add_css_class("destructive-action")
         quit_button.connect("clicked", lambda *_: self.quit())
         buttons.append(quit_button)
         buttons.append(test)
@@ -180,6 +272,19 @@ class QuickTtsApp(Gtk.Application):
         outer.append(buttons)
         window.set_child(outer)
         return window
+
+    def _load_styles(self) -> None:
+        display = Gdk.Display.get_default()
+        if display is None:
+            return
+        css_path = Path(__file__).with_name("assets") / "style.css"
+        provider = Gtk.CssProvider()
+        provider.load_from_path(str(css_path))
+        Gtk.StyleContext.add_provider_for_display(
+            display,
+            provider,
+            Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION,
+        )
 
     def _browse_model(self, _button: Gtk.Button, entry: Gtk.Entry) -> None:
         chooser = Gtk.FileChooserNative(

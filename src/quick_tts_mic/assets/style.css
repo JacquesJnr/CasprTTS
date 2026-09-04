@@ -1,0 +1,172 @@
+@define-color crust #11111b;
+@define-color mantle #181825;
+@define-color base #1e1e2e;
+@define-color surface0 #313244;
+@define-color surface1 #45475a;
+@define-color overlay0 #6c7086;
+@define-color text #cdd6f4;
+@define-color subtext0 #a6adc8;
+@define-color blue #89b4fa;
+@define-color lavender #b4befe;
+@define-color green #a6e3a1;
+@define-color red #f38ba8;
+
+window {
+  background: @base;
+  color: @text;
+}
+
+.overlay-window {
+  background: transparent;
+}
+
+.overlay-shell {
+  background: @mantle;
+  border: 1px solid @surface1;
+  border-radius: 16px;
+  padding: 18px;
+}
+
+.brand-icon {
+  color: @blue;
+  background: alpha(@blue, 0.12);
+  border-radius: 12px;
+  padding: 10px;
+}
+
+.eyebrow {
+  color: @blue;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.4px;
+}
+
+.title {
+  color: @text;
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.subtitle,
+.hint,
+.field-help {
+  color: @subtext0;
+}
+
+.hint,
+.field-help {
+  font-size: 12px;
+}
+
+entry,
+spinbutton,
+dropdown > button {
+  color: @text;
+  background: @crust;
+  border: 1px solid @surface1;
+  border-radius: 10px;
+  padding: 9px 12px;
+  box-shadow: none;
+}
+
+entry:focus,
+spinbutton:focus-within,
+dropdown > button:focus {
+  border-color: @blue;
+  box-shadow: 0 0 0 2px alpha(@blue, 0.18);
+}
+
+.message-entry {
+  font-size: 16px;
+  min-height: 34px;
+}
+
+button {
+  color: @text;
+  background: @surface0;
+  border: 1px solid @surface1;
+  border-radius: 10px;
+  padding: 9px 14px;
+  box-shadow: none;
+}
+
+button:hover {
+  background: @surface1;
+}
+
+button.suggested-action,
+.send-button {
+  color: @crust;
+  background: @blue;
+  border-color: @blue;
+  font-weight: 700;
+}
+
+button.suggested-action:hover,
+.send-button:hover {
+  background: @lavender;
+  border-color: @lavender;
+}
+
+button.destructive-action {
+  color: @red;
+  background: alpha(@red, 0.1);
+  border-color: alpha(@red, 0.35);
+}
+
+.settings-root {
+  background: @base;
+  padding: 28px;
+}
+
+.settings-card {
+  background: @mantle;
+  border: 1px solid @surface0;
+  border-radius: 14px;
+  padding: 18px;
+}
+
+.section-title {
+  color: @text;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.field-label {
+  color: @subtext0;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.status-pill {
+  color: @green;
+  background: alpha(@green, 0.1);
+  border: 1px solid alpha(@green, 0.28);
+  border-radius: 999px;
+  padding: 5px 10px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+checkbutton check {
+  background: @crust;
+  border: 1px solid @surface1;
+  border-radius: 5px;
+}
+
+checkbutton check:checked {
+  color: @crust;
+  background: @blue;
+  border-color: @blue;
+}
+
+.shortcut-chip {
+  color: @text;
+  background: @crust;
+  border: 1px solid @surface1;
+  border-radius: 8px;
+  padding: 7px 10px;
+  font-family: monospace;
+  font-weight: 700;
+}
+
