@@ -26,6 +26,12 @@ class QuickTtsApp(Gtk.Application):
         self.settings_window: Gtk.ApplicationWindow | None = None
         self.overlay_window: Gtk.ApplicationWindow | None = None
         self.entry: Gtk.Entry | None = None
+
+    def do_startup(self) -> None:
+        Gtk.Application.do_startup(self)
+        # Startup only runs in the primary GApplication instance. Holding here
+        # keeps that background process alive without trapping remote shortcut
+        # invocations in their own invisible processes.
         self.hold()
 
     def do_command_line(self, command_line: Gio.ApplicationCommandLine) -> int:
