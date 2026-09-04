@@ -63,6 +63,10 @@ hyprctl configerrors
 If the shortcut is already assigned, add `hl.unbind("SUPER + ALT + T")` before
 the new binding and note what it previously did.
 
+This development checkout installs an app-menu entry named **Quick TTS Mic** in
+`~/.local/share/applications/` and binds the overlay shortcut in the user's
+Omarchy `bindings.lua`. Both launch the project-local virtual environment.
+
 ## Current prototype limits
 
 - Piper/model installation is not automated yet.

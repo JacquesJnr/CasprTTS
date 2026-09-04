@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Quick TTS Mic
+GenericName=Text-to-speech microphone
+Comment=Send typed speech to a virtual microphone
+Exec=/home/jacq/Work/quick-tts-mic/.venv/bin/quick-tts-mic
+Icon=audio-input-microphone
+Terminal=false
+Categories=AudioVideo;Audio;
+Keywords=TTS;Speech;Microphone;Discord;Accessibility;
+StartupNotify=true
