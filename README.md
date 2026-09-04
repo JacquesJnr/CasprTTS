@@ -43,10 +43,8 @@ test before installing the shortcut.
 For this development checkout, `en_GB-alan-medium` is downloaded into the
 ignored `data/voices/` directory and is discovered automatically. It is a
 temporary male English prototype voice, not a replacement for Microsoft James.
-The checkout also includes Piper's `en_GB-southern_english_female-low` model as
-the closest official female English option. Piper currently has no Australian
-English model, so Caspr labels it as British rather than implying an accent it
-does not have.
+The checkout also includes the `en_GB-jenny_dioco-medium` model, shown in Caspr
+as Jenny with Irish female voice metadata.
 
 ## Omarchy shortcut
 

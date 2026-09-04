@@ -98,10 +98,9 @@ manual Hyprland edit.
 
 The message overlay exposes the same installed voices through a compact
 dropdown. The prototype voice set is Alan (British male, medium quality), Jenny
-(Irish female, medium quality; Piper model `jenny_dioco`), and Southern English
-(British female, low quality). Piper has no official Australian English model;
-the downstream Windows version remains responsible for genuine Microsoft
-Australian voices.
+(Irish female, medium quality; Piper model `jenny_dioco`). Piper has no official
+Australian English model; the downstream Windows version remains responsible
+for genuine Microsoft Australian voices.
 
 ## Visual design
 
