@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import subprocess
+import threading
 from dataclasses import dataclass
 
 
@@ -27,36 +28,40 @@ class PipeWireRouter:
 
     def __init__(self) -> None:
         self._module_id: str | None = None
+        self._lock = threading.Lock()
 
     @property
     def discord_source_name(self) -> str:
         return f"{VIRTUAL_SINK}.monitor"
 
     def ensure_virtual_mic(self) -> None:
-        if self._sink_exists():
-            return
-        result = subprocess.run(
-            [
-                "pactl",
-                "load-module",
-                "module-null-sink",
-                f"sink_name={VIRTUAL_SINK}",
-                "sink_properties=device.description=QuickTTS_Microphone",
-            ],
-            text=True,
-            capture_output=True,
-        )
-        if result.returncode:
-            raise AudioError(result.stderr.strip() or "Could not create virtual microphone")
-        self._module_id = result.stdout.strip()
+        with self._lock:
+            module_ids = self._module_ids()
+            if module_ids:
+                # Old prototype processes can leave server-side Pulse modules
+                # behind. Keep one canonical device and remove duplicates.
+                for module_id in module_ids[1:]:
+                    self._unload(module_id)
+                return
+            result = subprocess.run(
+                [
+                    "pactl",
+                    "load-module",
+                    "module-null-sink",
+                    f"sink_name={VIRTUAL_SINK}",
+                    "sink_properties=device.description=QuickTTS_Microphone",
+                ],
+                text=True,
+                capture_output=True,
+            )
+            if result.returncode:
+                raise AudioError(result.stderr.strip() or "Could not create virtual microphone")
+            self._module_id = result.stdout.strip()
 
     def close(self) -> None:
-        if self._module_id:
-            subprocess.run(
-                ["pactl", "unload-module", self._module_id],
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-            )
+        with self._lock:
+            for module_id in self._module_ids():
+                self._unload(module_id)
             self._module_id = None
 
     def outputs(self) -> list[AudioOutput]:
@@ -79,11 +84,14 @@ class PipeWireRouter:
 
     def play(self, wav_path: str, monitor_locally: bool, local_output: str = "") -> None:
         self.ensure_virtual_mic()
-        commands = [["pw-play", "--target", VIRTUAL_SINK, wav_path]]
+        # PipeWire's PulseAudio compatibility layer gives us stable device
+        # names. Native pw-play targets are numeric node IDs on this system and
+        # change whenever the virtual sink is recreated.
+        commands = [["paplay", "--device", VIRTUAL_SINK, wav_path]]
         if monitor_locally:
-            command = ["pw-play"]
+            command = ["paplay"]
             if local_output:
-                command += ["--target", local_output]
+                command += ["--device", local_output]
             commands.append(command + [wav_path])
 
         processes = [subprocess.Popen(command) for command in commands]
@@ -99,3 +107,25 @@ class PipeWireRouter:
         )
         return result.returncode == 0
 
+    def _module_ids(self) -> list[str]:
+        result = subprocess.run(
+            ["pactl", "list", "short", "modules"],
+            text=True,
+            capture_output=True,
+        )
+        if result.returncode:
+            return []
+        marker = f"sink_name={VIRTUAL_SINK}"
+        return [
+            line.split("\t", 1)[0]
+            for line in result.stdout.splitlines()
+            if "module-null-sink" in line and marker in line
+        ]
+
+    @staticmethod
+    def _unload(module_id: str) -> None:
+        subprocess.run(
+            ["pactl", "unload-module", module_id],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )

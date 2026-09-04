@@ -63,7 +63,8 @@ secondary surfaces; composing a message must stay instantaneous.
 ### Audio behavior
 
 - The app manages a PipeWire virtual microphone while it is running.
-- Discord consumes `quick_tts_sink.monitor` as its input.
+- Discord consumes **Monitor of QuickTTS_Microphone**
+  (`quick_tts_sink.monitor`) as its input.
 - Speech also plays through headphones by default.
 - Local monitoring can be disabled and its output device can be selected.
 - The virtual microphone receives TTS only; a physical microphone mix is not
@@ -158,4 +159,3 @@ The Omarchy prototype is successful when:
 - Select a pleasant bundled/recommended prototype voice.
 - Test rapid message submission while a previous message is playing.
 - Verify local monitoring does not feed unrelated desktop audio into Discord.
-

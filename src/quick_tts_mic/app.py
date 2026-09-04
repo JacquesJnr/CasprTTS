@@ -101,7 +101,7 @@ class QuickTtsApp(Gtk.Application):
         title.add_css_class("title-1")
         outer.append(title)
         outer.append(Gtk.Label(
-            label="Discord input: QuickTTS_Microphone monitor",
+            label="Discord input: Monitor of QuickTTS_Microphone",
             xalign=0,
             selectable=True,
         ))
@@ -256,4 +256,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
