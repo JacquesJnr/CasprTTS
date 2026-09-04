@@ -19,6 +19,7 @@ KNOWN_VOICES = {
     "en_GB-alan-medium": ("Alan", "British male · medium"),
     "en_GB-jenny_dioco-medium": ("Jenny", "Irish female · medium"),
     "en_US-amy-medium": ("Amy", "American female · medium"),
+    "en_US-hfc_male-medium": ("Dan", "American male · medium"),
 }
 
 

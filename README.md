@@ -45,7 +45,8 @@ ignored `data/voices/` directory and is discovered automatically. It is a
 temporary male English prototype voice, not a replacement for Microsoft James.
 The checkout also includes the `en_GB-jenny_dioco-medium` model, shown in Caspr
 as Jenny with Irish female voice metadata, plus `en_US-amy-medium`, shown as Amy
-with American female voice metadata.
+with American female voice metadata. `en_US-hfc_male-medium` is shown as Dan
+with American male voice metadata.
 
 ## Omarchy shortcut
 
