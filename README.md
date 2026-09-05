@@ -90,3 +90,18 @@ Omarchy `bindings.lua`. Both launch the project-local virtual environment.
 - The virtual microphone exists while the application runs.
 - Shortcut editing is manual for this first slice.
 - Live PipeWire and Hyprland behavior must be tested inside the desktop session.
+
+### Microsoft voice preference (Windows release preparation)
+
+Settings includes a separate Microsoft voices dropdown. On Windows, install the
+optional discovery support with `pip install '.[windows-voices]'`. It uses PyWinRT
+and Windows `SpeechSynthesizer.all_voices` to list only installed voices exposed
+by that API. Restart Caspr after changing installed voices to refresh the list.
+
+The preference is saved independently of the Piper model. Missing saved voices
+are not replaced automatically. On Linux/Omarchy or when discovery is unavailable,
+the dropdown is disabled and the saved preference is preserved.
+
+Microsoft playback is not available yet: messages, samples and the overlay still
+use Piper. This does not make the current GTK/PipeWire app a runnable Windows
+release; see [the Windows release plan](docs/WINDOWS_RELEASE_PLAN.md).

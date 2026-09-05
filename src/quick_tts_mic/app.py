@@ -11,6 +11,7 @@ from gi.repository import Gdk, Gio, GLib, Gtk  # noqa: E402
 
 from .config import AppConfig
 from .history import SessionHistory
+from .microsoft_voices import discover_microsoft_voices
 from .speech import SpeechQueue
 from .voices import VoiceOption, discover_voices
 
@@ -156,7 +157,7 @@ class QuickTtsApp(Gtk.Application):
         voice_card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
         voice_card.add_css_class("settings-card")
         voice_card.add_css_class("voice-card")
-        voice_title = Gtk.Label(label="01 / Voice", xalign=0)
+        voice_title = Gtk.Label(label="01 / Piper voice", xalign=0)
         voice_title.add_css_class("section-title")
         voice_header = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
         voice_title.set_hexpand(True)
@@ -215,6 +216,39 @@ class QuickTtsApp(Gtk.Application):
             row.add_controller(select_voice)
             voice_grid.attach(row, index % 2, index // 2, 1, 1)
             self.settings_voice_buttons.append((radio, voice))
+        microsoft = discover_microsoft_voices()
+        microsoft_label = Gtk.Label(label="Microsoft voices", xalign=0)
+        microsoft_label.add_css_class("field-label")
+        voice_card.append(microsoft_label)
+        microsoft_dropdown = Gtk.DropDown(
+            model=Gtk.StringList.new([voice.menu_label for voice in microsoft.voices])
+        )
+        selected = microsoft.selected_index(self.config.microsoft_voice_id)
+        microsoft_dropdown.set_selected(
+            selected if selected is not None else Gtk.INVALID_LIST_POSITION
+        )
+        microsoft_dropdown.set_sensitive(bool(microsoft.voices))
+        microsoft_dropdown.set_tooltip_text("Saved preference only; Microsoft playback is not available yet")
+        voice_card.append(microsoft_dropdown)
+        microsoft_status = Gtk.Label(
+            label=microsoft.selection_status(self.config.microsoft_voice_id), xalign=0, wrap=True,
+        )
+        microsoft_status.add_css_class("field-help")
+        voice_card.append(microsoft_status)
+        microsoft_help = Gtk.Label(
+            label="Microsoft playback is not available yet. Messages and samples use Piper.",
+            xalign=0, wrap=True,
+        )
+        microsoft_help.add_css_class("field-help")
+        voice_card.append(microsoft_help)
+
+        def microsoft_voice_changed(widget: Gtk.DropDown, _param: object) -> None:
+            index = widget.get_selected()
+            if index < len(microsoft.voices):
+                self._set_config_value("microsoft_voice_id", microsoft.voices[index].voice_id)
+                microsoft_status.set_label(microsoft.selection_status(self.config.microsoft_voice_id))
+
+        microsoft_dropdown.connect("notify::selected", microsoft_voice_changed)
         outer.append(voice_card)
 
         audio_card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)

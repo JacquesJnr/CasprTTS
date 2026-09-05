@@ -1,7 +1,28 @@
 # Caspr TTS Windows release plan
 
 Research date: 2026-09-05. Branch: `feature/windows-release`.
-Status: researched proposal; no Windows implementation or executable validated yet.
+Status: release proposal with a preliminary Microsoft voice preference picker;
+no Windows backend or executable validated yet.
+
+## Authorized preliminary voice preference picker
+
+The separately authorized settings dropdown is now implemented in the current GTK
+shell. It saves `microsoft_voice_id` independently of Piper's `model_path` and uses
+PyWinRT `SpeechSynthesizer.all_voices` to enumerate installed voice IDs, display
+names and languages. Install the optional discovery dependencies on Windows with
+`pip install '.[windows-voices]'`. No voice names or IDs are bundled as options.
+This uses the [PyWinRT property projection](https://pywinrt.readthedocs.io/en/latest/types.html#properties).
+
+The picker is disabled on Linux/Omarchy, when dependencies are missing, when the
+API fails, or when no voices are returned. An absent saved voice remains saved
+with no automatic replacement. Discovery runs when settings are first built;
+restart Caspr after installing/removing voices to refresh the list.
+
+This is preference storage only: Microsoft playback and provider switching are
+not implemented. Messages, samples and the overlay continue to use Piper. The
+Windows Qt shell, audio backend, packaging and actual Windows API validation
+remain release work. Tests on Linux cover the optional discovery boundary with
+simulated API responses; they do not verify installed Windows voices or James.
 
 ## Recommended release
 
@@ -59,7 +80,8 @@ Before merging the Windows implementation, test upgrades from existing config
 files, provider switching in both directions, missing Microsoft voices, and Piper
 messages/samples with a saved Microsoft preference. Assert that existing model
 paths and unrelated settings survive load/save. This is part of the Windows release
-scope; the separate preliminary dropdown implementation and PR were cancelled.
+scope. The later explicit authorization for the preliminary preference picker
+supersedes the earlier cancellation of that separate dropdown work.
 
 ## Framework choices and alternatives
 
