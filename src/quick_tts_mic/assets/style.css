@@ -1,201 +1,193 @@
-@define-color crust #11111b;
-@define-color mantle #181825;
-@define-color base #1e1e2e;
-@define-color surface0 #313244;
-@define-color surface1 #45475a;
-@define-color overlay0 #6c7086;
-@define-color text #cdd6f4;
-@define-color subtext0 #a6adc8;
-@define-color blue #89b4fa;
-@define-color lavender #b4befe;
-@define-color green #a6e3a1;
-@define-color red #f38ba8;
+/* CASPR: quiet, tactile music hardware. See STYLE_GUIDE.md. */
+@define-color crust #101918;
+@define-color mantle #172220;
+@define-color base #121c1b;
+@define-color surface0 #243330;
+@define-color surface1 #465653;
+@define-color text #e0e8e3;
+@define-color subtext0 #a9bab2;
+@define-color coral #f28b70;
+@define-color aqua #80d2c6;
+@define-color lime #b3ce78;
+@define-color amber #e7b863;
 
 window {
   background: @base;
   color: @text;
 }
 
-label,
-.voice-switcher,
-.voice-switcher label,
-.voice-name {
-  font-family: "Adwaita Sans", "Noto Color Emoji";
+label, entry, spinbutton, dropdown, button {
+  font-family: "Adwaita Sans", "Noto Sans", "Noto Color Emoji";
+  font-size: 13px;
 }
 
-.overlay-window {
-  background: transparent;
-}
+.overlay-window { background: transparent; }
 
-.overlay-shell {
+.overlay-shell, .settings-card {
   background: @mantle;
   border: 1px solid @surface1;
-  border-radius: 16px;
-  padding: 18px;
+  border-radius: 22px;
+  padding: 14px;
+  box-shadow: inset 0 0 0 1px alpha(@surface1, 0.25);
 }
 
 .brand-icon {
-  color: @blue;
-  background: alpha(@blue, 0.12);
+  color: @coral;
+  background: @crust;
+  border: 1px solid @surface1;
   border-radius: 12px;
-  padding: 10px;
+  padding: 8px;
 }
 
 .eyebrow {
-  color: @blue;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 1.4px;
+  color: @coral;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 2px;
 }
 
 .title {
   color: @text;
-  font-size: 24px;
-  font-weight: 700;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 1px;
 }
 
-.subtitle,
-.hint,
-.field-help {
-  color: @subtext0;
-}
+.subtitle, .hint, .field-help, .footer-hint { color: @subtext0; }
+.hint, .field-help, .footer-hint { font-size: 11px; }
+.footer-hint { letter-spacing: 0.3px; }
 
-.hint,
-.field-help {
-  font-size: 12px;
-}
-
-entry,
-spinbutton,
-dropdown > button {
+entry, spinbutton, dropdown > button {
   color: @text;
   background: @crust;
   border: 1px solid @surface1;
-  border-radius: 10px;
-  padding: 9px 12px;
-  box-shadow: none;
+  border-radius: 11px;
+  padding: 6px 10px;
+  box-shadow: inset 0 1px 2px alpha(black, 0.2);
 }
 
-entry:focus,
-spinbutton:focus-within,
-dropdown > button:focus {
-  border-color: @blue;
-  box-shadow: 0 0 0 2px alpha(@blue, 0.18);
+entry:focus, spinbutton:focus-within, dropdown > button:focus-visible {
+  border-color: @aqua;
+  outline: 1px solid @aqua;
+  outline-offset: 2px;
 }
 
 .message-entry {
   font-size: 16px;
-  min-height: 34px;
+  min-height: 30px;
+  padding: 8px 12px;
 }
 
 .voice-switcher > button {
-  min-width: 190px;
-  padding: 7px 10px;
-  font-size: 12px;
+  min-width: 156px;
+  padding: 4px 8px;
 }
+.voice-switcher label { font-size: 11px; }
 
 button {
   color: @text;
   background: @surface0;
   border: 1px solid @surface1;
-  border-radius: 10px;
-  padding: 9px 14px;
-  box-shadow: none;
+  border-radius: 11px;
+  padding: 6px 12px;
+  box-shadow: 0 2px 0 alpha(black, 0.28);
 }
-
-button:hover {
-  background: @surface1;
+button:hover { background: #30423d; }
+button:active { box-shadow: inset 0 1px 2px alpha(black, 0.3); }
+button:focus-visible, checkbutton:focus-visible {
+  outline: 1px solid @aqua;
+  outline-offset: 2px;
 }
-
-button.suggested-action,
-.send-button {
+button.suggested-action {
   color: @crust;
-  background: @blue;
-  border-color: @blue;
+  background: @aqua;
+  border-color: @aqua;
   font-weight: 700;
 }
-
-button.suggested-action:hover,
-.send-button:hover {
-  background: @lavender;
-  border-color: @lavender;
-}
-
+button.suggested-action:hover { background: #a0e1d7; }
 button.destructive-action {
-  color: @red;
-  background: alpha(@red, 0.1);
-  border-color: alpha(@red, 0.35);
+  color: @coral;
+  background: @crust;
+  border-color: alpha(@coral, 0.45);
 }
+button.destructive-action:hover { background: alpha(@coral, 0.12); }
 
-.settings-root {
-  background: @base;
-  padding: 28px;
-}
-
-.settings-card {
-  background: @mantle;
-  border: 1px solid @surface0;
-  border-radius: 14px;
-  padding: 18px;
-}
+.settings-root { background: @base; padding: 14px; }
+.settings-card { padding: 12px; }
 
 .voice-choice {
   background: @crust;
-  border: 1px solid @surface0;
-  border-radius: 10px;
-  padding: 10px 12px;
+  border: 1px solid alpha(@surface1, 0.75);
+  border-radius: 12px;
+  padding: 7px 9px;
 }
-
-.voice-choice:hover {
-  background: alpha(@surface0, 0.55);
-  border-color: @surface1;
-}
-
-.voice-name {
-  color: @text;
-  font-weight: 700;
-}
-
-.section-title {
-  color: @text;
-  font-size: 15px;
-  font-weight: 700;
-}
-
-.field-label {
-  color: @subtext0;
-  font-size: 13px;
-  font-weight: 600;
-}
+.voice-choice:hover { background: @surface0; border-color: @coral; }
+.voice-name { color: @text; font-size: 13px; font-weight: 700; }
+.section-title { font-size: 15px; font-weight: 800; letter-spacing: 0.5px; }
+.voice-card .section-title { color: @coral; }
+.audio-card .section-title { color: @aqua; }
+.behavior-card .section-title { color: @lime; }
+.module-index { color: @subtext0; font-family: monospace; font-size: 10px; }
+.field-label { color: @text; font-size: 12px; font-weight: 600; }
 
 .status-pill {
-  color: @green;
-  background: alpha(@green, 0.1);
-  border: 1px solid alpha(@green, 0.28);
+  color: @amber;
+  background: @crust;
+  border: 1px solid alpha(@amber, 0.4);
   border-radius: 999px;
-  padding: 5px 10px;
-  font-size: 12px;
+  padding: 3px 8px;
+  font-size: 10px;
   font-weight: 700;
 }
 
-checkbutton check {
+checkbutton check, checkbutton radio {
   background: @crust;
   border: 1px solid @surface1;
-  border-radius: 5px;
+  min-width: 16px;
+  min-height: 16px;
 }
-
-checkbutton check:checked {
+checkbutton check { border-radius: 5px; }
+checkbutton radio { border-radius: 999px; }
+checkbutton check:checked, checkbutton radio:checked {
   color: @crust;
-  background: @blue;
-  border-color: @blue;
+  background: @lime;
+  border-color: @lime;
 }
+.voice-card checkbutton radio:checked, .voice-card checkbutton check:checked {
+  background: @coral;
+  border-color: @coral;
+}
+.audio-card checkbutton check:checked { background: @aqua; border-color: @aqua; }
 
 .shortcut-chip {
-  color: @text;
+  color: @subtext0;
   background: @crust;
   border: 1px solid @surface1;
-  border-radius: 8px;
-  padding: 7px 10px;
+  border-radius: 7px;
+  padding: 4px 7px;
   font-family: monospace;
-  font-weight: 700;
+  font-size: 11px;
 }
+
+.volume-scale { padding: 8px 0; }
+.volume-scale trough {
+  min-height: 5px;
+  background: @crust;
+  border: 1px solid @surface1;
+  border-radius: 999px;
+}
+.volume-scale highlight { background: @aqua; border-color: @aqua; border-radius: 999px; }
+.volume-scale slider {
+  min-width: 16px;
+  min-height: 16px;
+  background: @aqua;
+  border: 3px solid @mantle;
+  border-radius: 999px;
+  box-shadow: 0 0 0 1px @aqua;
+}
+.volume-scale value { color: @aqua; font-family: monospace; font-size: 12px; }
+.settings-actions { background: @base; padding: 8px 14px 14px; }
+
+button.sample-button { background: @coral; border-color: @coral; padding: 3px 10px; }
+button.sample-button:hover { background: #f5a48e; }
+button.sample-button:disabled { opacity: 0.55; }

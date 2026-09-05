@@ -2,12 +2,30 @@ from __future__ import annotations
 
 import json
 import subprocess
+import tempfile
 import threading
+import wave
 from dataclasses import dataclass
 
 
 VIRTUAL_SINK = "quick_tts_sink"
 VIRTUAL_SOURCE = "quick_tts_mic"
+PLAYBACK_PREROLL_SECONDS = 0.5
+
+
+def _write_prerolled_wav(source_path: str, output_path: str) -> None:
+    """Wake the output in the same stream that will carry the speech."""
+    with wave.open(source_path, "rb") as source:
+        with wave.open(output_path, "wb") as output:
+            output.setparams(source.getparams())
+            frames = round(source.getframerate() * PLAYBACK_PREROLL_SECONDS)
+            # Unsigned 8-bit PCM has its silence midpoint at 128.
+            silence = b"\x80" if source.getsampwidth() == 1 else b"\x00"
+            output.writeframes(
+                silence * frames * source.getnchannels() * source.getsampwidth()
+            )
+            while chunk := source.readframes(65536):
+                output.writeframes(chunk)
 
 
 class AudioError(RuntimeError):
@@ -95,14 +113,50 @@ class PipeWireRouter:
             if sink.get("name") != VIRTUAL_SINK
         ]
 
-    def play(self, wav_path: str, monitor_locally: bool, local_output: str = "") -> None:
+    def play(
+        self, wav_path: str, monitor_locally: bool, local_output: str = "",
+        volume: int = 100,
+    ) -> None:
         self.ensure_virtual_mic()
+        with tempfile.TemporaryDirectory(prefix="quick-tts-playback-") as temp_dir:
+            playback_path = f"{temp_dir}/speech.wav"
+            _write_prerolled_wav(wav_path, playback_path)
+            self._play_file(playback_path, monitor_locally, local_output, volume)
+
+    def play_sample(self, wav_path: str, local_output: str = "", volume: int = 100) -> None:
+        # Resolve an explicit non-Caspr sink even when the system default is
+        # the virtual mic. Never fall back to paplay's implicit default here.
+        outputs = self.outputs()
+        names = {output.name for output in outputs}
+        if local_output:
+            target = local_output if local_output in names else ""
+        else:
+            result = subprocess.run(
+                ["pactl", "get-default-sink"], text=True, capture_output=True,
+            )
+            default = result.stdout.strip() if result.returncode == 0 else ""
+            target = default if default in names else (outputs[0].name if outputs else "")
+        if not target:
+            raise AudioError("Choose an available headphone output to sample a voice")
+        with tempfile.TemporaryDirectory(prefix="quick-tts-sample-") as temp_dir:
+            playback_path = f"{temp_dir}/sample.wav"
+            _write_prerolled_wav(wav_path, playback_path)
+            volume_arg = f"--volume={round(max(0, min(100, volume)) * 65536 / 100)}"
+            result = subprocess.run(["paplay", volume_arg, "--device", target, playback_path])
+            if result.returncode:
+                raise AudioError("Voice sample playback failed")
+
+    def _play_file(
+        self, wav_path: str, monitor_locally: bool, local_output: str,
+        volume: int = 100,
+    ) -> None:
         # PipeWire's PulseAudio compatibility layer gives us stable device
         # names. Native pw-play targets are numeric node IDs on this system and
         # change whenever the virtual sink is recreated.
-        commands = [["paplay", "--device", VIRTUAL_SINK, wav_path]]
+        volume_arg = f"--volume={round(max(0, min(100, volume)) * 65536 / 100)}"
+        commands = [["paplay", volume_arg, "--device", VIRTUAL_SINK, wav_path]]
         if monitor_locally:
-            command = ["paplay"]
+            command = ["paplay", volume_arg]
             if local_output:
                 command += ["--device", local_output]
             commands.append(command + [wav_path])

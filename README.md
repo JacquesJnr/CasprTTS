@@ -6,14 +6,26 @@ a PipeWire virtual microphone and, by default, mirrors them to your headphones.
 ## Prototype behavior
 
 - `SUPER + ALT + T` opens or refocuses one centered message box.
-- Enter or **Send** queues the text, clears it, and immediately hides the box.
+- Enter queues the text, clears it, and immediately hides the box.
 - Escape clears and hides the box.
 - Up/Down browse the last 25 messages from the current app session only.
 - Messages are spoken in order, with a configurable 0.5-second default delay.
+- Settings → Audio routing includes a **Speech volume** slider (0–100%). Changes apply
+  automatically to subsequent speech through the virtual microphone and
+  headphones. The default is 100%; 0% mutes speech.
+- Each playback includes a 0.5-second silent lead-in to let idle audio outputs
+  wake before speech begins. This is additional to the configured queue delay.
 - The virtual microphone appears as **QuickTTS_Microphone** in Discord
   (`quick_tts_mic` internally).
 - Errors produce desktop notifications in debug mode and are silent otherwise.
+- **Sample voice** in the Voice panel says “I love text-to-speech” locally using
+  the selected voice, headphone output, and speech volume, even if headphone
+  monitoring is off. Samples never route to Caspr’s virtual microphone or history.
+- All settings apply and persist automatically as you change them.
 - The application is started manually and remains active after Settings closes.
+
+The interface follows the compact studio-hardware palette and controls in
+[STYLE_GUIDE.md](STYLE_GUIDE.md).
 
 ## Requirements
 

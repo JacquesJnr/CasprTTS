@@ -6,7 +6,7 @@ import sys
 import tempfile
 import threading
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Callable
 
@@ -22,6 +22,8 @@ class SpeechError(RuntimeError):
 class SpeechRequest:
     text: str
     submitted_at: float
+    sample_config: AppConfig | None = None
+    on_complete: Callable[[], None] | None = None
 
 
 class PiperEngine:
@@ -70,6 +72,14 @@ class SpeechQueue:
     def submit(self, text: str) -> None:
         self._queue.put(SpeechRequest(text=text, submitted_at=time.monotonic()))
 
+    def sample(self, on_complete: Callable[[], None] | None = None) -> None:
+        self._queue.put(SpeechRequest(
+            text="I love text-to-speech",
+            submitted_at=time.monotonic(),
+            sample_config=replace(self._config_provider()),
+            on_complete=on_complete,
+        ))
+
     def stop(self) -> None:
         self._queue.put(None)
         self._thread.join(timeout=3)
@@ -80,11 +90,17 @@ class SpeechQueue:
             request = self._queue.get()
             if request is None:
                 return
-            config = self._config_provider()
+            config = request.sample_config or self._config_provider()
             try:
                 with tempfile.TemporaryDirectory(prefix="quick-tts-") as temp_dir:
                     wav_path = str(Path(temp_dir) / "speech.wav")
                     self._engine.synthesize(request.text, config.model_path, wav_path)
+                    if request.sample_config is not None:
+                        self._router.play_sample(
+                            wav_path, local_output=config.local_output,
+                            volume=config.speech_volume,
+                        )
+                        continue
                     remaining = (
                         request.submitted_at
                         + max(0.0, config.playback_delay_seconds)
@@ -96,6 +112,10 @@ class SpeechQueue:
                         wav_path,
                         monitor_locally=config.local_monitor,
                         local_output=config.local_output,
+                        volume=config.speech_volume,
                     )
             except Exception as error:  # Keep the queue alive after a failed item.
                 self._error_callback(str(error))
+            finally:
+                if request.on_complete:
+                    request.on_complete()

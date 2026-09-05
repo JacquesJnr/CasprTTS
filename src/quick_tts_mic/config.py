@@ -29,6 +29,7 @@ class AppConfig:
     model_path: str = field(default_factory=_default_model_path)
     local_monitor: bool = True
     local_output: str = ""
+    speech_volume: int = 100
     playback_delay_seconds: float = 0.5
     debug_notifications: bool = True
     history_limit: int = 25
