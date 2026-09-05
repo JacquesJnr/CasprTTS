@@ -27,3 +27,20 @@ def test_existing_config_defaults_to_full_volume(tmp_path: Path) -> None:
     path = tmp_path / "config.json"
     path.write_text('{"local_monitor": false}')
     assert AppConfig.load(path).speech_volume == 100
+
+
+def test_old_config_keeps_piper_and_adds_empty_microsoft_preference(tmp_path: Path) -> None:
+    path = tmp_path / "config.json"
+    path.write_text('{"model_path": "/custom/piper.onnx", "speech_volume": 42, "local_monitor": false}')
+    config = AppConfig.load(path)
+    assert config.microsoft_voice_id == ""
+    assert config.model_path == "/custom/piper.onnx"
+    config.microsoft_voice_id = "installed-or-missing-windows-id"
+    config.save(path)
+    restored = AppConfig.load(path)
+    assert restored == config
+    assert restored.speech_volume == 42
+    assert restored.local_monitor is False
+    restored.model_path = "/custom/another.onnx"
+    restored.save(path)
+    assert AppConfig.load(path).microsoft_voice_id == "installed-or-missing-windows-id"

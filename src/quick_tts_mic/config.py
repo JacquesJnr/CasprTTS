@@ -33,6 +33,7 @@ class AppConfig:
     playback_delay_seconds: float = 0.5
     debug_notifications: bool = True
     history_limit: int = 25
+    microsoft_voice_id: str = ""
 
     @classmethod
     def load(cls, path: Path = CONFIG_PATH) -> "AppConfig":
