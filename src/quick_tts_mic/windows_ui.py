@@ -210,6 +210,12 @@ class Settings(QWidget):
         self.hotkey_status = QLabel()
         self.hotkey_status.setWordWrap(True)
         form.addRow(self.hotkey_status)
+        self.debug_notifications = QCheckBox("Show speech, device and routing errors")
+        self.debug_notifications.setToolTip(
+            "When disabled, routine synthesis and device failures stay out of the overlay and tray. "
+            "Shortcut validation remains visible while editing Settings."
+        )
+        form.addRow("Runtime diagnostics", self.debug_notifications)
         self.status = QLabel("Ready")
         form.addRow(self.status)
         self.error = QLabel()
@@ -235,6 +241,9 @@ class Settings(QWidget):
         self.volume.valueChanged.connect(lambda value: self.change("speech_volume", value))
         self.delay.valueChanged.connect(lambda value: self.change("playback_delay_seconds", value))
         self.hotkey.editingFinished.connect(self.set_hotkey)
+        self.debug_notifications.toggled.connect(
+            lambda value: self.change("debug_notifications", value)
+        )
         self.verified.toggled.connect(controller.verify_preview)
 
     def change(self, key, value):
@@ -368,6 +377,7 @@ class Controller:
                                       (s.volume, c.speech_volume, "setValue"),
                                       (s.delay, c.playback_delay_seconds, "setValue"),
                                       (s.hotkey, c.hotkey, "setText"),
+                                      (s.debug_notifications, c.debug_notifications, "setChecked"),
                                       (s.verified, self.verification is not None, "setChecked")):
             widget.blockSignals(True)
             getattr(widget, setter)(value)
@@ -381,6 +391,9 @@ class Controller:
         s.sample.setEnabled(can_verify and self.verification is not None)
         voice = s.microsoft.currentText() if c.speech_provider == "microsoft" else s.piper.currentText()
         self.overlay.voice_label.setText(f"{c.speech_provider.title()} · {voice or 'Choose a voice in Settings'}")
+        if not c.debug_notifications:
+            s.error.clear()
+            self.overlay.error.clear()
 
     def invalidate_preview(self):
         self.verification = None
@@ -451,6 +464,10 @@ class Controller:
         self.settings.activateWindow()
 
     def on_error(self, message):
+        if not self.config.debug_notifications:
+            self.settings.error.clear()
+            self.overlay.error.clear()
+            return
         self.settings.error.setText(message)
         self.overlay.error.setText(message)
         if self.start_services:

@@ -36,5 +36,5 @@ a.datas = [item for item in a.datas if not item[0].lower().endswith("-asio.dll")
 pyz = PYZ(a.pure)
 exe = EXE(pyz, a.scripts, [], exclude_binaries=True, name="CasprTTS",
           debug=False, bootloader_ignore_signals=False, strip=False, upx=False,
-          console=False, disable_windowed_traceback=False)
+          console=False, disable_windowed_traceback=True)
 coll = COLLECT(exe, a.binaries, a.datas, strip=False, upx=False, name="CasprTTS")

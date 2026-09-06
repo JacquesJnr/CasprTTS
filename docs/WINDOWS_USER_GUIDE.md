@@ -40,9 +40,11 @@ digit or F1–F24. Windows-key combinations are not supported.
 
 Messages use the provider, voice, volume and outputs selected when submitted. They
 play in order. The configurable delay is measured from submission, and playback
-adds 0.5 seconds of silence to wake an idle output. Errors appear in Settings and a
-tray notification without including the spoken text. A failed item does not stop
-the rest of the queue. Quit discards queued work.
+adds 0.5 seconds of silence to wake an idle output. Runtime speech, device and
+routing errors are silent by default. Enable **Show speech, device and routing
+errors** in Settings when diagnosing a failure; visible warnings do not include
+spoken text. Shortcut conflicts remain visible while editing the shortcut. A
+failed item does not stop the rest of the queue. Quit discards queued work.
 
 Launching a second copy opens the running copy's message box. Closing Settings
 keeps the app running; **Quit** stops the worker and releases the shortcut.

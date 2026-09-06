@@ -13,6 +13,7 @@ from PySide6.QtWidgets import QApplication
 from quick_tts_mic.windows_ui import Controller
 from quick_tts_mic.windows_runtime import WindowsConfig
 from quick_tts_mic.windows_audio import Endpoint
+from quick_tts_mic.windows_app import _SmokeReporter
 
 
 @pytest.fixture(scope='module')
@@ -93,3 +94,36 @@ def test_enter_escape_history_and_no_disk_history(controller):
     QTest.keyClick(overlay.entry, Qt.Key.Key_Escape)
     assert not overlay.entry.text() and not overlay.isVisible()
     assert len(submitted) == 1
+
+
+def test_runtime_errors_are_silent_by_default_and_stale_messages_clear(controller):
+    assert controller.config.debug_notifications is False
+    controller.on_error("device disappeared")
+    assert not controller.settings.error.text()
+    assert not controller.overlay.error.text()
+    controller.settings.error.setText("old settings failure")
+    controller.overlay.error.setText("old overlay failure")
+    controller.on_error("another failure")
+    assert not controller.settings.error.text()
+    assert not controller.overlay.error.text()
+
+
+def test_runtime_errors_are_visible_when_debug_notifications_enabled(controller):
+    controller.settings.debug_notifications.setChecked(True)
+    assert controller.config.debug_notifications is True
+    controller.on_error("device disappeared")
+    assert controller.settings.error.text() == "device disappeared"
+    assert controller.overlay.error.text() == "device disappeared"
+
+    controller.settings.debug_notifications.setChecked(False)
+    assert not controller.settings.error.text()
+    assert not controller.overlay.error.text()
+
+
+def test_smoke_report_checkpoints_are_flushed(tmp_path):
+    report = tmp_path / "smoke.json"
+    reporter = _SmokeReporter(report)
+    reporter.checkpoint("qt_imports_begin")
+    assert '"stage": "qt_imports_begin"' in report.read_text()
+    reporter.finish(stage="complete", ok=True)
+    assert '"ok": true' in report.read_text()
