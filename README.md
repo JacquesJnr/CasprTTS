@@ -3,6 +3,16 @@
 A keyboard-first TTS message box for Omarchy. It speaks queued messages through
 a PipeWire virtual microphone and, by default, mirrors them to your headphones.
 
+## Windows
+
+The Windows application uses a separate Qt shell with installed Microsoft speech,
+Piper, explicit WASAPI output selection, a tray menu and Ctrl+Alt+T shortcut.
+See the [Windows user guide](docs/WINDOWS_USER_GUIDE.md),
+[build instructions](docs/WINDOWS_BUILD.md), and
+[speech/routing probes](docs/WINDOWS_FEASIBILITY.md).
+Windows native/hardware acceptance is tracked separately from Linux tests.
+The instructions below describe the existing Omarchy application.
+
 ## Prototype behavior
 
 - `SUPER + ALT + T` opens or refocuses one centered message box.

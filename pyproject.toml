@@ -10,6 +10,8 @@ requires-python = ">=3.11"
 
 [project.scripts]
 quick-tts-mic = "quick_tts_mic.app:main"
+caspr-tts-windows = "quick_tts_mic.windows_app:main"
+caspr-windows-probe = "quick_tts_mic.windows_probe:main"
 
 [project.optional-dependencies]
 windows-voices = [

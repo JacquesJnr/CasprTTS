@@ -1,8 +1,28 @@
 # Caspr TTS Windows release plan
 
 Research date: 2026-09-05. Branch: `feature/windows-release`.
-Status: release proposal with a preliminary Microsoft voice preference picker;
-no Windows backend or executable validated yet.
+Status: Windows runtime, Qt shell, diagnostic probes and packaging implementation
+in progress (2026-09-06). Native Windows artifact results and hardware acceptance
+must be recorded separately; Linux tests are not Windows validation.
+
+## Implementation update
+
+The isolated Windows entry point is `quick_tts_mic.windows_app:main`. It now includes
+separate Microsoft/Piper selections, a FIFO synthesis worker, Qt overlay/settings/tray,
+configurable native hotkey, single-instance activation, and Windows-local data paths.
+The existing Linux entry point and modules remain intact. User authorization expanded
+the work beyond stage 1 into a usable executable; orchestration owns build publication.
+
+The application uses SoundCard's WASAPI endpoint-ID adapter instead of persisting
+PortAudio indexes. Exact Core Audio IDs are resolved by fresh enumeration; fuzzy
+name helpers and system-default fallback are not used. NumPy/SciPy convert PCM for
+44.1/48 kHz playback. Sounddevice remains a comparison diagnostic probe. Preview
+activation requires separate outputs plus per-session user confirmation of an external
+capture-isolation test; it is not an automated hardware/privacy claim.
+
+See [the user guide](WINDOWS_USER_GUIDE.md), [feasibility probes](WINDOWS_FEASIBILITY.md)
+and [build instructions](WINDOWS_BUILD.md). The original stage gates below continue
+to define what needs actual Windows, device and Discord measurements.
 
 ## Authorized preliminary voice preference picker
 
