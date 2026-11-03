@@ -37,7 +37,11 @@ a = Analysis(
     [str(root / "packaging/windows/launcher.py")],
     pathex=[str(root / "src")], binaries=binaries, datas=datas,
     hiddenimports=hiddenimports, hookspath=[], hooksconfig={},
-    runtime_hooks=[], excludes=["gi", "tkinter", "PyQt5", "PyQt6", "PySide6"],
+    runtime_hooks=[],
+    # Build/test-only modules reached via pytest, onnxruntime.transformers and cffi's build shim.
+    # Bundling pkg_resources adds a startup hook that crashes on setuptools 80 (missing backports).
+    excludes=["gi", "tkinter", "PyQt5", "PyQt6", "PySide6",
+              "pkg_resources", "setuptools", "pytest", "_pytest", "onnxruntime.transformers"],
     noarchive=False,
 )
 # The upstream sounddevice hook also gathers ASIO; filter the final TOC.
