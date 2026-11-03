@@ -64,7 +64,7 @@ PyInstaller collects native libraries, Piper espeak data, SoundCard's
 and the built web UI (`web/dist`, from `npm --prefix web run build`). No Linux GTK
 entry point is imported by the launcher. `proxy_tools` 0.1.0 (a pywebview dependency)
 only exists as a source archive, so it is hash-pinned and installed with
-`--no-binary=proxy-tools --no-build-isolation`; everything else is wheel-only.
+`--no-binary=proxy-tools --no-build-isolation` after the locked setuptools and wheel; everything else is wheel-only.
 
 To update pins, resolve with `pip download --only-binary=:all: --platform win_amd64
 --python-version 3.11 --implementation cp --abi cp311`, inspect wheel metadata,

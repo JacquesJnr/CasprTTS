@@ -55,8 +55,11 @@ jobs:
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
       - name: Install locked dependencies and application
         run: |
-          # proxy_tools (pywebview dependency) only exists as a hash-pinned source archive; it builds
-          # with the setuptools bundled in Python 3.11, so no unpinned build tools are downloaded.
+          # proxy_tools (pywebview dependency) only exists as a hash-pinned source archive. Install the
+          # locked setuptools + wheel first so it builds without isolation and no unpinned build tools.
+          Select-String -Path requirements-windows-build.txt -Pattern '^(setuptools|wheel)==' | ForEach-Object Line | Set-Content "$env:RUNNER_TEMP\bootstrap.txt"
+          python -m pip install --require-hashes --only-binary=:all: -r "$env:RUNNER_TEMP\bootstrap.txt"
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
           python -m pip install --require-hashes --only-binary=:all: --no-binary=proxy-tools --no-build-isolation -r requirements-windows-build.txt
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           python -m pip install --no-deps --no-build-isolation .
