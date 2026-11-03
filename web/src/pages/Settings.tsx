@@ -194,7 +194,7 @@ export function Settings({ api }: { api: Api }) {
     api.take_focus_section().then((section) => section && window.casprFocus?.(section))
   }, [api, !state]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (!state) return null
+  if (!state) return error ? <p role="alert" className="m-4 rounded-md border border-destructive/40 bg-muted px-3 py-2 text-[13px] text-destructive">{error}</p> : null
   const { config } = state
   const windows = state.platform === "windows"
   const provider = config.speech_provider ?? "piper"

@@ -26,7 +26,13 @@ export function Overlay({ api }: { api: Api }) {
     return () => window.removeEventListener("keydown", onKey)
   }, [api, chips])
 
-  if (!state) return null
+  if (!state) {
+    return error ? (
+      <main className="overlay-page flex min-h-svh items-end p-4">
+        <p role="alert" className="w-full rounded-xl border border-destructive/40 bg-card p-4 text-[13px] text-destructive">{error}</p>
+      </main>
+    ) : null
+  }
   const known = commandSlugs(state.config.quick_options)
 
   // On Windows with Microsoft voices selected, the switcher lists those instead of Piper models.

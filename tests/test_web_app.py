@@ -33,3 +33,17 @@ def test_valid_hotkey_is_saved_and_reregistered(tmp_path, monkeypatch):
     app.set("hotkey", "Ctrl+Shift+F9")
     assert app.config.hotkey == "Ctrl+Shift+F9" and changes == ["Ctrl+Shift+F9"]
     assert WindowsConfig.load(tmp_path / "config.json").hotkey == "Ctrl+Shift+F9"
+
+
+def test_state_survives_a_failing_source():
+    app = object.__new__(web_app.CasprWeb)
+    app.config = web_app.AppConfig()
+    app.microsoft = web_app.discover_microsoft_voices()
+
+    def broken_outputs():
+        raise OSError("device enumeration failed")
+
+    app.speech = SimpleNamespace(voices=lambda config: [], outputs=broken_outputs, discord_input="mic")
+    state = app.state()
+    assert state["outputs"] == [] and state["config"]["speech_volume"] == 100
+    assert state["errors"] == ["Audio outputs: device enumeration failed"]

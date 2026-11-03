@@ -26,6 +26,7 @@ export type State = {
   outputs: { name: string; description: string }[]
   microsoft: { voices: MicrosoftVoice[]; status: string }
   discordInput: string
+  errors: string[] // parts of the state Python could not read
 }
 export type Api = {
   kind: () => Promise<"overlay" | "settings">
@@ -64,7 +65,18 @@ export function whenApiReady(): Promise<Api> {
 export function useCasprState(api: Api) {
   const [state, setState] = useState<State>()
   const [error, setError] = useState("")
-  const refresh = useCallback(() => api.state().then(setState), [api])
+  const refresh = useCallback(
+    () =>
+      api.state().then(
+        (s) => {
+          setState(s)
+          if (s.errors?.length) setError(s.errors.join(" · "))
+        },
+        // Without state the pages render nothing, so surface why instead of a blank window.
+        (e: unknown) => setError(`Could not load settings: ${e instanceof Error ? e.message : String(e)}`)
+      ),
+    [api]
+  )
 
   useEffect(() => {
     window.casprRefresh = refresh

@@ -7,6 +7,7 @@ import random
 import sys
 import tempfile
 import threading
+import traceback
 from dataclasses import asdict
 from multiprocessing.connection import Client, Listener
 from pathlib import Path
@@ -144,14 +145,26 @@ class CasprWeb:
 
     def state(self) -> dict:
         saved_ms = self.config.microsoft_voice_id
+        errors: list[str] = []
+
+        def part(label, read, default):
+            # One failing source (e.g. audio device enumeration) must not blank the whole page.
+            try:
+                return read()
+            except Exception as error:
+                traceback.print_exc()
+                errors.append(f"{label}: {error}")
+                return default
+
         return {
             "platform": "windows" if WINDOWS else "linux",
             "config": {k: v for k, v in asdict(self.config).items() if not k.startswith("_")},
-            "voices": [
+            "voices": part("Voices", lambda: [
                 {"id": v.model_path, "name": v.name, "detail": v.detail, "gender": v.gender}
                 for v in self.speech.voices(self.config)
-            ],
-            "outputs": self.speech.outputs(),
+            ], []),
+            "outputs": part("Audio outputs", self.speech.outputs, []),
+            "errors": errors,
             "microsoft": {
                 "voices": [{"id": v.voice_id, "label": v.menu_label, "name": v.name,
                             "language": v.language, "gender": v.gender} for v in self.microsoft.voices],
