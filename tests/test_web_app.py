@@ -1,3 +1,4 @@
+import threading
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -13,6 +14,7 @@ def app_with(config, tmp_path: Path, monkeypatch):
     monkeypatch.setattr(web_app, "SETTABLE", web_app.SETTABLE | {"hotkey"})
     app = object.__new__(web_app.CasprWeb)
     app.config, app.windows = config, {}
+    app._save_lock = threading.Lock()
     changes = []
     app.hotkey = SimpleNamespace(change=changes.append)
     monkeypatch.setattr(windows_runtime, "config_path", lambda: tmp_path / "config.json")

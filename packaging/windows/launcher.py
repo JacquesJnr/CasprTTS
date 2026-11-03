@@ -73,7 +73,27 @@ def render_ui(webview, index, timeout=45):
 
 def smoke(checkpoint):
     """Load every native piece and render the UI once in WebView2; no audio, hardware or network."""
-    checkpoint(stage="imports_begin")
+    checkpoint(stage="backend_begin")
+    # Same order as the app: the backend imports SoundCard before anything else touches COM,
+    # then Settings lists outputs from a bridge thread (an S_FALSE COM error broke this once).
+    import threading
+    from quick_tts_mic.windows_runtime import WindowsBackend, WindowsConfig
+    backend = WindowsBackend(WindowsConfig, lambda message: None)
+    listed, failed = [], []
+
+    def read_outputs():
+        try:
+            listed.append(backend.outputs())
+        except Exception as error:
+            failed.append(f"{type(error).__name__}: {error}")
+
+    reader = threading.Thread(target=read_outputs)
+    reader.start()
+    reader.join(30)
+    backend.stop()
+    if not listed:
+        raise RuntimeError(f"Listing audio outputs failed: {failed[0] if failed else 'timed out'}")
+    checkpoint(stage="backend_complete", outputs=len(listed[0]))
     import numpy as np
     import onnxruntime
     import piper

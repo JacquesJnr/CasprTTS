@@ -38,10 +38,18 @@ SETTABLE = {
 }
 
 
+OVERLAY_WIDTH = 560
+
+
 def window_options(kind: str) -> dict:
     """pywebview create_window arguments per window; the Windows smoke test renders these too."""
     if kind == "overlay":
-        return dict(title="Caspr", width=560, height=400, resizable=False, frameless=True,
+        if WINDOWS:
+            # pywebview can't make a WinForms window truly transparent, so the overlay is opaque
+            # (card colour) and the page asks fit_overlay() to hug its content instead.
+            return dict(title="Caspr", width=OVERLAY_WIDTH, height=140, resizable=False,
+                        frameless=True, on_top=True, easy_drag=True, background_color="#0f1011")
+        return dict(title="Caspr", width=OVERLAY_WIDTH, height=400, resizable=False, frameless=True,
                     transparent=True, on_top=True, easy_drag=True)
     return dict(title="Caspr TTS — Settings", width=620, height=760, min_size=(520, 560),
                 background_color="#08090a")
@@ -93,6 +101,7 @@ class CasprWeb:
         self.microsoft = discover_microsoft_voices()
         self.windows: dict[str, webview.Window] = {}
         self.focus_section = ""  # settings section to scroll to once its page loads
+        self._save_lock = threading.Lock()  # bridge calls arrive on many threads at once
         self.hotkey = None  # Windows: global shortcut (Linux binds it in the desktop instead)
         self.tray = None
 
@@ -110,6 +119,9 @@ class CasprWeb:
         window = webview.create_window(url=url, js_api=Api(self, kind), hidden=hidden,
                                        **window_options(kind))
         window.events.closed += lambda: self.windows.pop(kind, None)
+        if WINDOWS and kind == "overlay":
+            from .windows_shell import round_corners
+            window.events.shown += lambda: round_corners(window)
         self.windows[kind] = window
 
     def set(self, name: str, value: object) -> None:
@@ -122,8 +134,9 @@ class CasprWeb:
         if name == "hotkey":
             from .windows_runtime import parse_hotkey
             parse_hotkey(value)  # raises a readable error for the page
-        setattr(self.config, name, value)
-        self.config.save()
+        with self._save_lock:
+            setattr(self.config, name, value)
+            self.config.save()
         if name == "hotkey" and self.hotkey:
             self.hotkey.change(value)
         self.broadcast("window.casprRefresh?.()")
@@ -242,6 +255,13 @@ class Api:
             app.open("settings")
         if self._kind == "overlay":
             self.close()
+
+    def fit_overlay(self, height: float) -> None:
+        """Windows: resize the opaque overlay to its content, keeping the bottom edge fixed."""
+        window = self._app.windows.get("overlay")
+        if WINDOWS and window and self._kind == "overlay":
+            from webview.window import FixPoint
+            window.resize(OVERLAY_WIDTH, max(100, min(520, round(height))), fix_point=FixPoint.SOUTH)
 
     def open_voices_folder(self) -> None:
         """Windows: Piper models live in %LOCALAPPDATA%\\Caspr TTS\\data\\voices; open it in Explorer."""

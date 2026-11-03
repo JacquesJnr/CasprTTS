@@ -26,6 +26,34 @@ export function Overlay({ api }: { api: Api }) {
     return () => window.removeEventListener("keydown", onKey)
   }, [api, chips])
 
+  // Windows overlays are opaque windows (no true transparency), so keep the window hugging the
+  // card plus any open menu; Python grows it upward with the bottom edge fixed.
+  const windows = state?.platform === "windows"
+  useEffect(() => {
+    if (!windows) return
+    let last = 0
+    const fit = () => {
+      const main = document.querySelector("main")
+      if (!main) return
+      const rects = [...main.querySelectorAll("*")].map((el) => el.getBoundingClientRect()).filter((r) => r.height > 0)
+      if (!rects.length) return
+      const height = Math.ceil(Math.max(...rects.map((r) => r.bottom)) - Math.min(...rects.map((r) => r.top)))
+      if (Math.abs(height - last) > 1) {
+        last = height
+        api.fit_overlay(height)
+      }
+    }
+    // Re-measure after DOM changes and once more when menu animations settle.
+    const schedule = () => {
+      requestAnimationFrame(fit)
+      setTimeout(fit, 350)
+    }
+    const observer = new MutationObserver(schedule)
+    observer.observe(document.body, { childList: true, subtree: true })
+    schedule()
+    return () => observer.disconnect()
+  }, [api, windows])
+
   if (!state) {
     return error ? (
       <main className="overlay-page flex min-h-svh items-end p-4">
@@ -61,7 +89,7 @@ export function Overlay({ api }: { api: Api }) {
   })
 
   return (
-    <main className="overlay-page flex min-h-svh items-end p-4">
+    <main className={`overlay-page flex min-h-svh items-end ${windows ? "" : "p-4"}`}>
       {agents.length ? (
         <SelectAIAgent
           agents={agents}

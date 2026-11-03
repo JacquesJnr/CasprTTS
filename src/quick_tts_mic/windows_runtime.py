@@ -96,7 +96,14 @@ class WindowsConfig(AppConfig):
         values.pop("_extra")
         temporary = path.with_suffix(".tmp")
         temporary.write_text(json.dumps({**self._extra, **values}, indent=2) + "\n", encoding="utf-8")
-        temporary.replace(path)
+        for attempt in range(5):
+            try:
+                temporary.replace(path)
+                return
+            except PermissionError:  # another process briefly holds config.json open
+                if attempt == 4:
+                    raise
+                time.sleep(0.05)
 
 
 def discover_windows_models(current="", directory=None):
@@ -246,7 +253,10 @@ class WindowsBackend:
     discord_input = "Stereo Mix"
 
     def __init__(self, config_provider, error_callback):
-        from .windows_audio import WindowsRouter
+        from .windows_audio import WindowsRouter, soundcard
+        # SoundCard calls CoInitializeEx at import and treats S_FALSE ("already initialised") as
+        # fatal, leaving a half-imported module. Import it here, before any com_apartment() runs.
+        soundcard()
         self._config = config_provider
         # ponytail: a preview is "verified" when its output differs from the message output
         # (Stereo Mix only captures the message device); add an explicit check if leaks show up.

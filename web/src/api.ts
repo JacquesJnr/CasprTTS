@@ -41,6 +41,7 @@ export type Api = {
   open_settings: (section?: string) => Promise<void>
   take_focus_section: () => Promise<string>
   open_voices_folder: () => Promise<void>
+  fit_overlay: (height: number) => Promise<void>
   close: () => Promise<void>
   quit: () => Promise<void>
 }

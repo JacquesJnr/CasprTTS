@@ -82,3 +82,14 @@ def start_tray(open_overlay: Callable[[], None], open_settings: Callable[[], Non
     icon = pystray.Icon("caspr-tts", tray_image(), "Caspr TTS", menu)
     icon.run_detached()
     return icon
+
+
+def round_corners(window) -> None:
+    """Ask Windows 11 to round a frameless pywebview window (ignored on Windows 10)."""
+    import ctypes
+    try:
+        hwnd = window.native.Handle.ToInt32()
+        preference = ctypes.c_int(2)  # DWMWCP_ROUND
+        ctypes.windll.dwmapi.DwmSetWindowAttribute(hwnd, 33, ctypes.byref(preference), ctypes.sizeof(preference))
+    except Exception:
+        pass  # purely cosmetic
