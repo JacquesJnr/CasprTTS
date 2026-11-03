@@ -1,29 +1,52 @@
-"""WASAPI playback by exact endpoint ID. No system-default or fuzzy lookup."""
+"""WASAPI playback through PortAudio (sounddevice), shared mode with Windows' own format conversion.
+
+Outputs are identified by their exact WASAPI device name; no system-default or fuzzy lookup.
+"""
 from __future__ import annotations
 
 from contextlib import ExitStack
 from dataclasses import dataclass
 import io
 import math
+import threading
 import wave
 
 from .windows_probe import ProbeError, wav_info
 
+WASAPI = "Windows WASAPI"
+# PortAudio's device list is a snapshot; refreshing it (re-initialising PortAudio) while a stream
+# is open would break playback, so listing and playing take turns.
+_PORTAUDIO = threading.RLock()
+
 
 @dataclass(frozen=True)
 class Endpoint:
-    id: str
+    id: str  # WASAPI device name, e.g. "Speakers (Realtek High Definition Audio(SST))"
     name: str
     channels: int
 
 
-def soundcard():
-    import soundcard as sc
-    return sc
+def sounddevice():
+    import sounddevice as sd
+    return sd
+
+
+def _wasapi_outputs(sd):
+    """(Endpoint, PortAudio index) for every WASAPI output device."""
+    host = next((i for i, h in enumerate(sd.query_hostapis()) if h["name"] == WASAPI), None)
+    if host is None:
+        raise ProbeError("Windows WASAPI audio is unavailable.")
+    return [(Endpoint(d["name"], d["name"], d["max_output_channels"]), index)
+            for index, d in enumerate(sd.query_devices())
+            if d["hostapi"] == host and d["max_output_channels"] > 0]
 
 
 def endpoints():
-    return [Endpoint(s.id, s.name, s.channels) for s in soundcard().all_speakers()]
+    sd = sounddevice()
+    with _PORTAUDIO:
+        sd._terminate()  # documented way to make PortAudio notice newly plugged-in devices
+        sd._initialize()
+        return [endpoint for endpoint, _ in _wasapi_outputs(sd)]
 
 
 def topology(devices):
@@ -96,26 +119,24 @@ class WindowsRouter:
 
     def play(self, data, config, preview, verification, cancelled):
         self.authorize(preview, verification)
-        sc = soundcard()
-        # Use objects from fresh enumeration directly: sc.get_speaker permits fuzzy matching.
-        speakers = sc.all_speakers()
-        devices = [Endpoint(s.id, s.name, s.channels) for s in speakers]
-        selected = destinations(config, devices, preview, verification)
-        buffers = [decode_audio(data, config.output_rate, min(2, d.channels), config.speech_volume / 100)
-                   for d in selected]
-        with ExitStack() as stack:
-            players = []
-            for device, buffer in zip(selected, buffers):
-                speaker = exact_endpoint(speakers, device.id)
-                players.append(stack.enter_context(speaker.player(
-                    samplerate=config.output_rate, channels=buffer.shape[1],
-                    blocksize=1024, exclusive_mode=False)))
-            # Both streams open before any speech. Never retry another destination.
-            if topology(endpoints()) != topology(devices):
-                raise ProbeError("Audio devices changed. Reselect outputs and reverify previews.")
-            for start in range(0, len(buffers[0]), 1024):
-                if cancelled.is_set():
-                    return
-                self.authorize(preview, verification)
-                for player, buffer in zip(players, buffers):
-                    player.play(buffer[start:start + 1024])
+        sd = sounddevice()
+        with _PORTAUDIO:
+            devices = _wasapi_outputs(sd)
+            selected = destinations(config, [endpoint for endpoint, _ in devices], preview, verification)
+            index = {endpoint.id: i for endpoint, i in devices}
+            # Speech is mono/stereo; auto_convert lets Windows' channel mixer and resampler fit it
+            # to any device format (e.g. 4-channel laptop speakers, 44.1 kHz, 24-bit).
+            settings = sd.WasapiSettings(exclusive=False, auto_convert=True)
+            buffers = [decode_audio(data, config.output_rate, min(2, device.channels), config.speech_volume / 100)
+                       for device in selected]
+            with ExitStack() as stack:
+                streams = [stack.enter_context(sd.OutputStream(
+                    device=index[device.id], samplerate=config.output_rate, channels=buffer.shape[1],
+                    dtype="float32", extra_settings=settings)) for device, buffer in zip(selected, buffers)]
+                # Every stream is open before any speech. Never retry another destination.
+                for start in range(0, len(buffers[0]), 1024):
+                    if cancelled.is_set():
+                        return
+                    self.authorize(preview, verification)
+                    for stream, buffer in zip(streams, buffers):
+                        stream.write(buffer[start:start + 1024])

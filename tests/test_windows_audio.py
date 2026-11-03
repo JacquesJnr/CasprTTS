@@ -38,35 +38,60 @@ def test_stereo_to_mono():
     assert data.shape[1] == 1
 
 
-def test_router_uses_exact_id_without_fuzzy_lookup(monkeypatch):
-    calls = []
-    class Speaker:
-        name = 'same name'
-        channels = 2
-        def __init__(self, id): self.id = id
-        def player(self, **kwargs):
-            calls.append((self.id, kwargs))
-            return self
-        def __enter__(self): return self
-        def __exit__(self, *args): pass
-        def play(self, data): pass
-    speakers = [Speaker('message'), Speaker('preview')]
-    monkeypatch.setattr(audio, 'soundcard', lambda: SimpleNamespace(all_speakers=lambda: speakers))
+class FakeSounddevice:
+    """Two WASAPI outputs plus an MME duplicate name that must never be picked."""
+
+    def __init__(self):
+        self.opened = []
+
+    def query_hostapis(self):
+        return [{'name': 'MME'}, {'name': 'Windows WASAPI'}]
+
+    def query_devices(self):
+        return [{'name': 'message', 'hostapi': 0, 'max_output_channels': 2},
+                {'name': 'message', 'hostapi': 1, 'max_output_channels': 4},
+                {'name': 'preview', 'hostapi': 1, 'max_output_channels': 2},
+                {'name': 'mic', 'hostapi': 1, 'max_output_channels': 0}]
+
+    def _terminate(self): pass
+    def _initialize(self): pass
+
+    def WasapiSettings(self, **kwargs):
+        return kwargs
+
+    def OutputStream(self, **kwargs):
+        self.opened.append(kwargs)
+        return self
+
+    def __enter__(self): return self
+    def __exit__(self, *args): pass
+    def write(self, data): pass
+
+
+def test_lists_wasapi_outputs_only():
+    fake = FakeSounddevice()
+    assert [(e.id, e.channels, i) for e, i in audio._wasapi_outputs(fake)] == [('message', 4, 1), ('preview', 2, 2)]
+
+
+def test_router_plays_exact_wasapi_devices_with_auto_convert(monkeypatch):
+    fake = FakeSounddevice()
+    monkeypatch.setattr(audio, 'sounddevice', lambda: fake)
     config = WindowsConfig(message_endpoint_id='message', preview_endpoint_id='preview', local_monitor=True)
     audio.WindowsRouter().play(wav_data(), config, False, None, threading.Event())
-    assert [c[0] for c in calls] == ['message', 'preview']
-    assert all(c[1]['exclusive_mode'] is False for c in calls)
-    calls.clear()
+    # Index 1 (WASAPI 'message'), not the MME device of the same name; stereo even on 4 channels.
+    assert [(o['device'], o['channels']) for o in fake.opened] == [(1, 2), (2, 2)]
+    assert all(o['extra_settings'] == {'exclusive': False, 'auto_convert': True} for o in fake.opened)
+    fake.opened.clear()
     config.message_endpoint_id = 'missing'
     with pytest.raises(ProbeError): audio.WindowsRouter().play(wav_data(), config, False, None, threading.Event())
-    assert not calls
+    assert not fake.opened
 
 
 def test_preview_revocation_blocks_before_audio_open(monkeypatch):
     config = WindowsConfig(message_endpoint_id='message', preview_endpoint_id='preview')
-    calls = []
-    monkeypatch.setattr(audio, 'soundcard', lambda: calls.append('opened'))
+    fake = FakeSounddevice()
+    monkeypatch.setattr(audio, 'sounddevice', lambda: fake)
     router = audio.WindowsRouter(preview_authorizer=lambda token: False)
     with pytest.raises(ProbeError, match='revoked'):
         router.play(wav_data(), config, True, ('old-token',), threading.Event())
-    assert not calls
+    assert not fake.opened

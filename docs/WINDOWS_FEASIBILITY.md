@@ -60,12 +60,12 @@ entries or copy voice resources to make James appear.
 
 ## Output identity and playback
 
-`endpoints` reports Windows render/capture IDs, the separate PortAudio output
-inventory, and `wasapi` outputs from SoundCard. The application uses the `wasapi`
-IDs returned by Core Audio (`IMMDevice::GetId`); names may be duplicated. It uses
-fresh enumeration and exact ID comparison, never SoundCard's fuzzy `get_speaker`
-helper. PortAudio indexes and names are diagnostic only and are not saved as app
-routing identity.
+`endpoints` reports Windows render/capture IDs, the PortAudio output inventory, and
+the `wasapi` outputs the app offers. The app plays through PortAudio's WASAPI host API
+in shared mode with `auto_convert`, so Windows adapts mono/stereo speech to the
+device's channel count, rate and sample format. Outputs are saved by exact WASAPI
+device name (PortAudio indexes change between runs); a duplicated name is reported as
+ambiguous and never guessed.
 
 For the application's endpoint-ID path:
 

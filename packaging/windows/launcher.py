@@ -74,8 +74,7 @@ def render_ui(webview, index, timeout=45):
 def smoke(checkpoint):
     """Load every native piece and render the UI once in WebView2; no audio, hardware or network."""
     checkpoint(stage="backend_begin")
-    # Same order as the app: the backend imports SoundCard before anything else touches COM,
-    # then Settings lists outputs from a bridge thread (an S_FALSE COM error broke this once).
+    # Same path as Settings: list WASAPI outputs through the backend from a bridge thread.
     import threading
     from quick_tts_mic.windows_runtime import WindowsBackend, WindowsConfig
     backend = WindowsBackend(WindowsConfig, lambda message: None)
@@ -98,7 +97,6 @@ def smoke(checkpoint):
     import onnxruntime
     import piper
     import sounddevice as sd
-    import soundcard
     from scipy.signal import resample_poly
     checkpoint(stage="audio_and_piper_imported")
     import winrt.windows.foundation.collections  # noqa: F401
@@ -116,8 +114,6 @@ def smoke(checkpoint):
     from piper.phonemize_espeak import EspeakPhonemizer
     if not EspeakPhonemizer().phonemize("en-us", "test"):
         raise RuntimeError("Piper phonemizer returned no phonemes")
-    if not (Path(soundcard.__file__).parent / "mediafoundation.py.h").is_file():
-        raise RuntimeError("SoundCard native definitions missing")
     if not DIST_INDEX.is_file():
         raise RuntimeError(f"Bundled UI missing: {DIST_INDEX}")
     resample_poly(np.zeros((16, 2), dtype=np.float32), 2, 1)

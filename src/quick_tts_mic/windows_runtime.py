@@ -139,7 +139,7 @@ def parse_hotkey(value):
 
 @contextmanager
 def com_apartment():
-    """Each worker initializes its own COM apartment, including SoundCard calls."""
+    """Each worker initializes its own COM apartment (WinRT synthesis, WASAPI via PortAudio)."""
     if sys.platform != "win32":
         yield
         return
@@ -245,7 +245,7 @@ class WindowsSpeechQueue:
                 else:
                     # Messages may contain the spoken text, which never leaves memory; the stage,
                     # type and stack frames (to caspr.log) are enough to locate the failure.
-                    # Playback errors only describe audio devices (e.g. SoundCard's "Error 0x8889…"),
+                    # Playback errors only describe audio devices (PortAudio/WASAPI errors),
                     # so their message is shown; synthesis messages are not.
                     detail = f"{type(error).__name__}: {error}" if stage == "playback" else type(error).__name__
                     print(f"{stage} failed: {detail}\n" + "".join(traceback.format_tb(error.__traceback__)),
@@ -266,10 +266,7 @@ class WindowsBackend:
     discord_input = "Stereo Mix"
 
     def __init__(self, config_provider, error_callback):
-        from .windows_audio import WindowsRouter, soundcard
-        # SoundCard calls CoInitializeEx at import and treats S_FALSE ("already initialised") as
-        # fatal, leaving a half-imported module. Import it here, before any com_apartment() runs.
-        soundcard()
+        from .windows_audio import WindowsRouter
         self._config = config_provider
         # ponytail: a preview is "verified" when its output differs from the message output
         # (Stereo Mix only captures the message device); add an explicit check if leaks show up.

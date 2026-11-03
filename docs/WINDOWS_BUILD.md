@@ -55,12 +55,11 @@ Windows wheel resolution and hashes were verified on 2026-09-06; native executio
 compatibility must pass Windows CI before calling the pins tested.
 
 Baseline versions: Piper 1.4.2, pywebview 6.2.1 (pythonnet 3.2.1), pystray 0.19.5, ONNX Runtime 1.22.1, NumPy 2.2.6,
-SciPy 1.15.3, SoundCard 0.4.6, sounddevice 0.5.2 and PyWinRT 3.2.1. SoundCard handles
-WASAPI endpoint-ID playback; sounddevice/PortAudio is diagnostic. WinRT runtime and
+SciPy 1.15.3, sounddevice 0.5.2 and PyWinRT 3.2.1. sounddevice (PortAudio WASAPI, shared mode, auto_convert) handles
+playback to the selected output by exact WASAPI device name. WinRT runtime and
 six projections are collected: Foundation, Foundation.Collections,
 Media.SpeechSynthesis, Storage.Streams, Devices.Enumeration and Media.Devices.
-PyInstaller collects native libraries, Piper espeak data, SoundCard's
-`mediafoundation.py.h`, PortAudio, pywebview's WebView2 SDK DLLs, pythonnet/clr_loader
+PyInstaller collects native libraries, Piper espeak data, PortAudio, pywebview's WebView2 SDK DLLs, pythonnet/clr_loader
 and the built web UI (`web/dist`, from `npm --prefix web run build`). No Linux GTK
 entry point is imported by the launcher. `proxy_tools` 0.1.0 (a pywebview dependency)
 only exists as a source archive, so it is hash-pinned and installed with
@@ -78,7 +77,7 @@ The executable entry point is `packaging/windows/launcher.py`:
 - `CasprTTS.exe` starts the app (`quick_tts_mic.web_app:main`): Settings, tray and hotkey.
 - `CasprTTS.exe --smoke-test --smoke-report <absolute-path>` loads every native
   dependency (pywebview's WinForms/WebView2 backend, pystray, WinRT, Piper's
-  phonemizer, SoundCard) and checks the bundled UI without windows, hardware,
+  phonemizer, WASAPI output listing) and checks the bundled UI without windows, hardware,
   models or network. It
   must exit zero and write a JSON object with `"ok": true`.
 - `CasprTTS.exe --probe ...` forwards to the runtime diagnostic CLI.

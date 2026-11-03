@@ -20,7 +20,7 @@ Invoke-Native python @('-m', 'pip', 'check')
 Invoke-Native python @('-m', 'PyInstaller', '--noconfirm', '--clean', '--distpath', 'dist', '--workpath', 'build/windows/pyinstaller', 'packaging/windows/CasprTTS.spec')
 $bundle = Join-Path $root 'dist\CasprTTS'
 # Enforce collection of dynamically opened resources before running native smoke.
-foreach ($pattern in @('soundcard/mediafoundation.py.h', 'piper/espeak-ng-data', '_sounddevice_data/portaudio-binaries/libportaudio64bit.dll',
+foreach ($pattern in @('piper/espeak-ng-data', '_sounddevice_data/portaudio-binaries/libportaudio64bit.dll',
                          'web/dist/index.html', 'webview/lib/Microsoft.Web.WebView2.Core.dll', 'webview/lib/runtimes/win-x64/native/WebView2Loader.dll',
                          'pythonnet/runtime/Python.Runtime.dll', 'clr_loader/ffi/dlls/amd64/ClrLoader.dll')) {
     if (-not (Test-Path (Join-Path "$bundle\_internal" $pattern))) { throw "Missing frozen resource: $pattern" }

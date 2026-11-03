@@ -9,7 +9,7 @@ binaries = []
 # its tray backend at runtime, so name them explicitly.
 hiddenimports = ["webview.platforms.winforms", "webview.platforms.edgechromium", "clr", "pystray._win32"]
 # These packages load extension modules, DLLs, headers or phonemizer resources dynamically.
-for package in ("piper", "onnxruntime", "soundcard", "_sounddevice_data", "winrt",
+for package in ("piper", "onnxruntime", "_sounddevice_data", "winrt",
                 "webview", "pythonnet", "clr_loader"):
     data, native, imports = collect_all(package)
     # Diagnostic PortAudio uses WASAPI; do not redistribute the optional ASIO binary.
@@ -17,15 +17,13 @@ for package in ("piper", "onnxruntime", "soundcard", "_sounddevice_data", "winrt
     binaries += [item for item in native if not item[0].lower().endswith("-asio.dll")]
     hiddenimports += imports
 for distribution in (
-    "piper-tts", "onnxruntime", "soundcard", "sounddevice", "winrt-runtime",
+    "piper-tts", "onnxruntime", "sounddevice", "winrt-runtime",
     "winrt-Windows.Media.SpeechSynthesis", "winrt-Windows.Storage.Streams",
     "winrt-Windows.Foundation", "winrt-Windows.Foundation.Collections",
     "winrt-Windows.Devices.Enumeration", "winrt-Windows.Media.Devices",
     "pywebview", "pythonnet", "clr_loader", "pystray", "pillow",
 ):
     datas += copy_metadata(distribution)
-# SoundCard reads this header at runtime using __file__.
-datas += collect_data_files("soundcard", includes=["*.h"])
 # The React UI, built by `npm --prefix web run build`; web_app loads it from sys._MEIPASS/web/dist.
 dist = root / "web" / "dist"
 if not (dist / "index.html").is_file():
