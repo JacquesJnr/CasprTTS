@@ -287,9 +287,15 @@ def main() -> int:
     app.open("overlay", hidden=kind != "overlay")
     if kind == "settings":
         app.open("settings")
-    webview.start(debug=bool(os.environ.get("CASPR_WEB_DEBUG")))
+    # Serve web/dist over pywebview's localhost server: WebView2 (Chromium) refuses ES-module
+    # scripts from file:// pages, which left Windows windows blank.
+    webview.start(debug=bool(os.environ.get("CASPR_WEB_DEBUG")), http_server=True)
     app.speech.stop()
-    return 0
+    # pywebview's localhost server leaves non-daemon threads behind; without a hard exit the
+    # process lingers after Quit, still owning the single-instance pipe, so relaunches do nothing.
+    sys.stdout.flush()
+    sys.stderr.flush()
+    os._exit(0)
 
 
 if __name__ == "__main__":

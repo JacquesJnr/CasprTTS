@@ -1,6 +1,7 @@
 """PyInstaller entry point: the pywebview app, the hardware probe, or a frozen-bundle smoke test."""
 import faulthandler
 import json
+import os
 from pathlib import Path
 import sys
 
@@ -23,8 +24,28 @@ def _report_writer(argv):
     return checkpoint, trace
 
 
+def render_ui(webview, index, timeout=45):
+    """Open the real UI in WebView2 the way the app does; pass once its JS calls back into Python."""
+    import threading
+    called = threading.Event()
+
+    class Bridge:
+        def kind(self):
+            return "settings"
+
+        def state(self):
+            called.set()  # the page's module script ran and reached the Python bridge
+            raise RuntimeError("smoke test: no app state")
+
+    window = webview.create_window("Caspr TTS smoke", str(index), js_api=Bridge(), width=400, height=300)
+    threading.Thread(target=lambda: (called.wait(timeout), window.destroy()), daemon=True).start()
+    webview.start(http_server=True)
+    if not called.is_set():
+        raise RuntimeError("UI did not load in WebView2 (scripts blocked or bridge unavailable)")
+
+
 def smoke(checkpoint):
-    """Load every native piece the app needs without opening windows, audio or the network."""
+    """Load every native piece and render the UI once in WebView2; no audio, hardware or network."""
     checkpoint(stage="imports_begin")
     import numpy as np
     import onnxruntime
@@ -54,6 +75,9 @@ def smoke(checkpoint):
         raise RuntimeError(f"Bundled UI missing: {DIST_INDEX}")
     resample_poly(np.zeros((16, 2), dtype=np.float32), 2, 1)
     tray_image()
+    checkpoint(stage="render_begin")
+    render_ui(webview, DIST_INDEX)
+    checkpoint(stage="render_complete")
     checkpoint(stage="complete", ok=True, portaudio=sd.get_portaudio_version(),
                onnxruntime=onnxruntime.__version__, piper=getattr(piper, "__version__", "imported"),
                pywebview=getattr(webview, "__version__", "imported"),
@@ -85,4 +109,9 @@ def main(argv):
 
 
 if __name__ == "__main__":
-    raise SystemExit(main(sys.argv[1:]))
+    code = main(sys.argv[1:])
+    if "--smoke-test" in sys.argv:
+        # pywebview leaves non-daemon threads behind after webview.start() returns; the report is
+        # already written, so exit now instead of hanging until smoke.ps1's timeout.
+        os._exit(code)
+    raise SystemExit(code)

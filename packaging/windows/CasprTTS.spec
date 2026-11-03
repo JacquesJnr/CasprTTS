@@ -50,8 +50,14 @@ a.binaries = [item for item in a.binaries if not item[0].lower().endswith("-asio
               and not any(s in item[0].replace("\\", "/").lower() for s in SKIP)]
 a.datas = [item for item in a.datas if not item[0].lower().endswith("-asio.dll")
            and not any(s in item[0].replace("\\", "/").lower() for s in SKIP)]
+# App icon (exe, taskbar, title bar): the same lime speech bubble as the tray icon.
+import sys
+sys.path.insert(0, str(root / "src"))
+from quick_tts_mic.windows_shell import tray_image
+icon_path = Path(workpath) / "CasprTTS.ico"
+tray_image().save(icon_path, sizes=[(16, 16), (24, 24), (32, 32), (48, 48), (64, 64)])
 pyz = PYZ(a.pure)
 exe = EXE(pyz, a.scripts, [], exclude_binaries=True, name="CasprTTS",
           debug=False, bootloader_ignore_signals=False, strip=False, upx=False,
-          console=False, disable_windowed_traceback=True)
+          console=False, disable_windowed_traceback=True, icon=str(icon_path))
 coll = COLLECT(exe, a.binaries, a.datas, strip=False, upx=False, name="CasprTTS")
