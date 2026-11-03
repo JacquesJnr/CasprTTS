@@ -12,6 +12,7 @@ requires-python = ">=3.11"
 quick-tts-mic = "quick_tts_mic.app:main"
 
 [project.optional-dependencies]
+web = ["pywebview>=6"]
 windows-voices = [
     "winrt-Windows.Media.SpeechSynthesis; sys_platform == 'win32'",
     "winrt-Windows.Foundation.Collections; sys_platform == 'win32'",
