@@ -61,6 +61,9 @@ export function Overlay({ api }: { api: Api }) {
             detail: `${c.phrases.length} phrase${c.phrases.length === 1 ? "" : "s"}`,
           }))}
           slashEmpty="No quick options yet · press + to add one"
+          onHistory={(direction, current) =>
+            direction === "previous" ? api.history_previous(current) : api.history_next()
+          }
           renderValue={(text) =>
             splitCommands(text, known).map((part, i) =>
               part.command ? <span key={i} className="text-primary">{part.text}</span> : part.text
@@ -96,7 +99,7 @@ export function Overlay({ api }: { api: Api }) {
               </div>
               <p className="mt-2 flex justify-between px-1 font-mono text-[11px] text-muted-foreground">
                 <span className={error ? "text-destructive" : "text-fog"}>{error || "caspr"}</span>
-                <span>Enter speak{chips.length > 0 && ` · Alt+${chips.length > 1 ? `1–${chips.length}` : 1} quick`} · Esc close</span>
+                <span>Enter speak · ↑↓ history{chips.length > 0 && ` · Alt+${chips.length > 1 ? `1–${chips.length}` : 1} quick`} · Esc close</span>
               </p>
             </>
           }

@@ -27,6 +27,8 @@ interface SelectAIAgentProps {
   /** Typing "/" at the start of a word lists these above the input. */
   slashOptions?: SlashOption[];
   slashEmpty?: React.ReactNode;
+  /** Up/Down outside the command menu: return the history entry to show. */
+  onHistory?: (direction: 'previous' | 'next', current: string) => Promise<string>;
   className?: string;
 }
 
@@ -40,6 +42,7 @@ export const SelectAIAgent: React.FC<SelectAIAgentProps> = ({
   renderValue,
   slashOptions,
   slashEmpty,
+  onHistory,
   className = '',
 }) => {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -167,6 +170,17 @@ export const SelectAIAgent: React.FC<SelectAIAgentProps> = ({
                     return setSlashStart(null);
                   }
                   if (e.key === 'Backspace' || e.key === 'Tab') setSlashStart(null);
+                }
+                if (onHistory && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+                  e.preventDefault();
+                  onHistory(e.key === 'ArrowUp' ? 'previous' : 'next', message).then((text) => {
+                    setMessage(text);
+                    requestAnimationFrame(() => {
+                      inputRef.current?.setSelectionRange(text.length, text.length);
+                      syncScroll();
+                    });
+                  });
+                  return;
                 }
                 if (e.key === 'Enter') send();
                 if (e.key === 'Escape') {

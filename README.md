@@ -14,6 +14,8 @@ headphones too.
 - `SUPER + ALT + T` opens a compact floating message box. Enter speaks and hides
   it; Escape clears and hides it.
 - Messages are spoken in order, with a configurable delay (0.5 s by default).
+- Up/Down browse the last 25 typed messages from the current session (kept as
+  typed, so a resent `/command` picks a fresh phrase).
 - A voice button switches between voices on the spot. Each voice shows its
   flag and a ♂/♀ glyph.
 - **Quick options**: up to five chips under the input. Click one, or press
@@ -144,7 +146,6 @@ Omarchy `bindings.lua`. Both launch the project-local virtual environment.
 
 ## Current limits
 
-- Up/Down message history from the GTK prototype is not in the new UI yet.
 - Speech errors are shown in the app, not as desktop notifications.
 - Piper/model installation is not automated yet.
 - The virtual microphone exists only while Caspr runs.

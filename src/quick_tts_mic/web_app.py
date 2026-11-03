@@ -14,6 +14,7 @@ from pathlib import Path
 import webview
 
 from .config import AppConfig, expand_slash_commands, normalize_quick_options
+from .history import SessionHistory
 from .microsoft_voices import discover_microsoft_voices
 from .speech import SpeechQueue
 from .voices import discover_voices
@@ -36,6 +37,7 @@ class CasprWeb:
     def __init__(self) -> None:
         self.config = AppConfig.load()
         self.speech = SpeechQueue(lambda: self.config, self.error)
+        self.history = SessionHistory(self.config.history_limit)  # typed messages, this session only
         self.microsoft = discover_microsoft_voices()
         self.windows: dict[str, webview.Window] = {}
         self.focus_section = ""  # settings section to scroll to once its page loads
@@ -47,6 +49,7 @@ class CasprWeb:
             window.hidden = False
             window.show()
             if kind == "overlay":
+                self.history.reset_navigation()
                 self.windows[kind].run_js("document.querySelector('input')?.focus()")
             return
         url = os.environ.get("CASPR_WEB_URL") or str(DIST_INDEX)
@@ -121,17 +124,28 @@ class Api:
         self._app.set(name, value)
 
     def speak(self, text: str) -> None:
-        text = expand_slash_commands(text.strip(), self._app.config.quick_options)
-        if text:
-            self._app.speech.submit(text)
-            if self._kind == "overlay":
-                self.close()
+        """Speak a typed message; it is kept in history as typed, so /commands re-roll."""
+        self._app.history.add(text)
+        self._submit(text)
 
     def speak_quick(self, index: int) -> None:
         """Speak a random phrase from quick option category `index` (its position in config)."""
         options = self._app.config.quick_options
         if 0 <= index < len(options) and options[index]["phrases"]:
-            self.speak(random.choice(options[index]["phrases"]))
+            self._submit(random.choice(options[index]["phrases"]))
+
+    def history_previous(self, current: str) -> str:
+        return self._app.history.previous(current)
+
+    def history_next(self) -> str:
+        return self._app.history.next()
+
+    def _submit(self, text: str) -> None:
+        text = expand_slash_commands(text.strip(), self._app.config.quick_options)
+        if text:
+            self._app.speech.submit(text)
+            if self._kind == "overlay":
+                self.close()
 
     def sample(self) -> None:
         # Resolves the page's promise once the sample finishes playing.
