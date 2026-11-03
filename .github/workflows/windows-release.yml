@@ -101,6 +101,7 @@ jobs:
           path: |
             build/windows/*.json
             build/windows/*.log
+            build/windows/*.txt
             build/windows/pyinstaller/**/*.txt
             build/windows/pyinstaller/**/*.html
           if-no-files-found: ignore
