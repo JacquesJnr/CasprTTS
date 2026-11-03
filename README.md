@@ -1,8 +1,8 @@
 ![CasprTTS](docs/Banner.png)
 
-A keyboard-first text-to-speech message box for Omarchy. Type a message, press
+A keyboard-first text-to-speech message box for Linux. Type a message, press
 Enter, and Caspr speaks it through a PipeWire virtual microphone that Discord
-(or anything else) can use as an input. By default you hear it in your
+(or any other app) can use as an input. By default you hear it in your
 headphones too.
 
 ![Caspr message box with a highlighted /greeting command and quick option chips](docs/screenshots/overlay.png)
@@ -11,8 +11,8 @@ headphones too.
 
 **Message box**
 
-- `SUPER + ALT + T` opens a compact floating message box. Enter speaks and hides
-  it; Escape clears and hides it.
+- A global shortcut opens a compact floating message box. Enter speaks and
+  hides it; Escape clears and hides it.
 - Messages are spoken in order, with a configurable delay (0.5 s by default).
 - Up/Down browse the last 25 typed messages from the current session (kept as
   typed, so a resent `/command` picks a fresh phrase).
@@ -24,7 +24,7 @@ headphones too.
 - **Slash commands**: type `/greeting` (any category name, lowercase, spaces as
   hyphens) inside a message and it is replaced by a random phrase from that
   category when spoken, e.g. `/greeting everyone` → "Hey everyone". Known
-  commands are highlighted in lime as you type.
+  commands are highlighted as you type.
 - **Command menu**: typing `/` at the start of a word lists your categories
   above the input. `↑`/`↓` and Enter or Tab insert one; Escape or Backspace
   closes the menu.
@@ -35,12 +35,13 @@ headphones too.
 
 **Settings**
 
-- **Piper voice**: four bundled English voices (Alan, Jenny, Amy, Dan) plus any
-  custom `.onnx` model. **Sample voice** plays "I love text-to-speech" in your
-  headphones only; samples never reach the virtual microphone.
-- **Audio**: a 270° volume knob (mouse, arrow keys or scroll wheel; 0% mutes),
+- **Piper voice**: four English voices with friendly names (Alan, Jenny, Amy,
+  Dan) plus any custom `.onnx` model. **Sample voice** plays "I love
+  text-to-speech" in your headphones only; samples never reach the virtual
+  microphone.
+- **Audio**: a volume knob (mouse, arrow keys or scroll wheel; 0% mutes),
   headphone monitoring on/off, and a choice of headphone output.
-- **Behavior**: playback delay, debug error messages and the overlay shortcut.
+- **Behavior**: playback delay and debug error messages.
 - **Quick options**: add, rename and delete categories, with one phrase per
   line. Each shows its `/command`, and ▶ says a random phrase right away.
 - Settings save automatically as you change them, and voice changes stay in
@@ -52,105 +53,92 @@ headphones too.
 | --- | --- |
 | ![Settings: voices, volume knob, audio and behavior](docs/screenshots/settings.png) | ![Settings: quick option categories with phrases and /commands](docs/screenshots/settings-quick-options.png) |
 
-**Under the hood**
-
-- The virtual microphone appears as **QuickTTS_Microphone** in Discord
-  (`quick_tts_mic` internally).
-- Caspr keeps one background instance. The first launch starts it; later
-  launches (such as the shortcut) just show its window, so reopening takes
-  ~150 ms. Closing windows keeps it running, along with the virtual mic, until
-  you choose **Quit**.
-- Each playback starts with 0.5 s of silence so idle audio outputs can wake up
-  before speech begins.
-- When debug errors are on, speech errors show in the message box footer and
-  as a banner in Settings.
-
-The look follows the "midnight command center" system in
-[STYLE_GUIDE.md](STYLE_GUIDE.md): layered near-black surfaces, Inter and
-IBM Plex Mono, and one lime accent that glows only on primary, active and
-focused items.
-
-## How it's built
-
-- **Python core**: speech queue, Piper synthesis, PipeWire routing and config
-  (`src/quick_tts_mic/`).
-- **UI**: React + Tailwind in `web/`, using [Watermelon UI](https://ui.watermelon.sh)
-  and shadcn components, shown in native windows by
-  [pywebview](https://pywebview.flowrl.com/). It uses WebKitGTK on Linux and
-  will use WebView2 on Windows.
-- The original GTK 4 interface is still available as `quick-tts-mic-gtk`.
+Caspr keeps running in the background after you close its windows, so the
+virtual microphone stays available until you choose **Quit**.
 
 ## Requirements
 
+- Linux with PipeWire and its PulseAudio compatibility layer (`pactl`, `paplay`)
 - Python 3.11+
-- PyGObject and WebKitGTK 4.1 (pywebview's GTK backend)
-- Node.js, to build the UI
-- PipeWire with its PulseAudio compatibility layer (`pactl`, `paplay`)
-- [Piper](https://github.com/OHF-Voice/piper1-gpl) and a compatible `.onnx`
+- PyGObject and WebKitGTK 4.1 (usually packaged as `python-gobject` /
+  `python3-gi` and `webkit2gtk-4.1` / `libwebkit2gtk-4.1`)
+- Node.js, to build the interface
+- [Piper](https://github.com/OHF-Voice/piper1-gpl) and at least one `.onnx`
   voice model with its neighboring `.onnx.json` file
 
-## Run from the repository
+## Install and run
 
 ```bash
+git clone https://github.com/JacquesJnr/CasprTTS.git
+cd CasprTTS
 python -m venv --system-site-packages .venv
-.venv/bin/python -m pip install -e '.[web]' -r requirements-dev.txt -r requirements-tts.txt
+.venv/bin/python -m pip install -e '.[web]' -r requirements-tts.txt
 npm --prefix web install
 npm --prefix web run build
 .venv/bin/quick-tts-mic            # Settings
 .venv/bin/quick-tts-mic overlay    # message box
 ```
 
-`--system-site-packages` lets the virtual environment use Omarchy's
-system-provided PyGObject while keeping Piper, pywebview and test tooling local
-to this project. Rebuild the UI (`npm --prefix web run build`) after changing
-anything in `web/`.
+`--system-site-packages` lets the virtual environment use your system's
+PyGObject while keeping Piper and the other Python dependencies local to the
+project.
 
-Select **QuickTTS_Microphone** as Discord's input device, then use **Open
-message box** in Settings to test before installing the shortcut.
+Then select **QuickTTS_Microphone** as the input device in Discord (or your
+other app), and use **Open message box** in Settings to try it.
 
-Voice models live in the ignored `data/voices/` directory and are discovered
-automatically. This checkout uses `en_GB-alan-medium` (Alan, British male),
-`en_GB-jenny_dioco-medium` (Jenny, Irish female), `en_US-amy-medium`
-(Amy, American female) and `en_US-hfc_male-medium` (Dan, American male).
+### Voices
 
-### Developing the UI
+Download Piper voices from
+[rhasspy/piper-voices](https://huggingface.co/rhasspy/piper-voices) and put each
+`.onnx` file and its `.onnx.json` file in `data/voices/`. They are discovered
+automatically. These four get friendly names and glyphs in the interface:
+
+| Model | Shown as |
+| --- | --- |
+| `en_GB-alan-medium` | 🇬🇧 Alan, British male |
+| `en_GB-jenny_dioco-medium` | 🇬🇧 Jenny, Irish female |
+| `en_US-amy-medium` | 🇺🇸 Amy, American female |
+| `en_US-hfc_male-medium` | 🇺🇸 Dan, American male |
+
+Any other model appears under its file name as a custom voice.
+
+## Global shortcut
+
+Bind a key in your desktop environment or window manager to the launcher
+script, replacing the path with your checkout:
+
+```
+/path/to/CasprTTS/scripts/quick-tts-overlay
+```
+
+The first press starts Caspr; later presses just show the message box.
+For example:
+
+- **Hyprland**: `bind = SUPER ALT, T, exec, /path/to/CasprTTS/scripts/quick-tts-overlay`
+- **GNOME**: Settings → Keyboard → Custom Shortcuts
+- **KDE Plasma**: System Settings → Shortcuts → Custom Shortcuts
+
+To add Caspr to your app menu, edit the `Exec=` path in
+`packaging/io.github.quickttsmic.App.desktop` and copy it to
+`~/.local/share/applications/`.
+
+## Development
 
 Run `npm --prefix web run dev`, then start Caspr with
-`CASPR_WEB_URL=http://localhost:5173` to load the live Vite server instead of
-the built files. Set `CASPR_WEB_DEBUG=1` to enable the web inspector. Python
-tests run with `.venv/bin/python -m pytest`.
+`CASPR_WEB_URL=http://localhost:5173` to load the live dev server instead of the
+built files. Set `CASPR_WEB_DEBUG=1` to enable the web inspector. Rebuild with
+`npm --prefix web run build` after changing anything in `web/`.
 
-## Omarchy shortcut
-
-First run `omarchy menu keybindings --print` and confirm `SUPER + ALT + T` is
-unused. Then add this to `~/.config/hypr/bindings.lua`, replacing the repository
-path if needed:
-
-```lua
-o.bind("SUPER + ALT + T", "Caspr TTS", "/home/jacq/Work/quick-tts-mic/scripts/quick-tts-overlay")
-```
-
-Validate the change:
-
-```bash
-hyprctl reload
-hyprctl configerrors
-```
-
-If the shortcut is already assigned, add `hl.unbind("SUPER + ALT + T")` before
-the new binding and note what it previously did.
-
-This development checkout installs an app-menu entry named **Caspr TTS** in
-`~/.local/share/applications/` and binds the overlay shortcut in the user's
-Omarchy `bindings.lua`. Both launch the project-local virtual environment.
+Install the test tools with `-r requirements-dev.txt` and run
+`.venv/bin/python -m pytest`. The visual design is documented in
+[STYLE_GUIDE.md](STYLE_GUIDE.md).
 
 ## Current limits
 
 - Speech errors are shown in the app, not as desktop notifications.
-- Piper/model installation is not automated yet.
+- Piper and voice model installation is manual.
 - The virtual microphone exists only while Caspr runs.
-- Shortcut editing is manual.
-- Live PipeWire and Hyprland behavior must be tested inside the desktop session.
+- The shortcut is set up in your desktop's settings, not in Caspr.
 
 ### Microsoft voice preference (Windows release preparation)
 
@@ -160,9 +148,9 @@ and Windows `SpeechSynthesizer.all_voices` to list only installed voices exposed
 by that API. Restart Caspr after changing installed voices to refresh the list.
 
 The preference is saved independently of the Piper model. Missing saved voices
-are not replaced automatically. On Linux/Omarchy or when discovery is unavailable,
-the dropdown is disabled and the saved preference is preserved.
+are not replaced automatically. On Linux, or when discovery is unavailable, the
+dropdown is disabled and the saved preference is preserved.
 
-Microsoft playback is not available yet: messages and samples still use Piper.
-The pywebview UI is designed to run on Windows (WebView2), but the audio routing
-is still PipeWire-only; see [the Windows release plan](docs/WINDOWS_RELEASE_PLAN.md).
+Microsoft playback is not available yet: messages and samples still use Piper,
+and audio routing is PipeWire-only. See
+[the Windows release plan](docs/WINDOWS_RELEASE_PLAN.md).
