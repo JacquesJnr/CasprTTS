@@ -3,6 +3,7 @@ import { motion } from "motion/react"
 import { Plus } from "lucide-react"
 
 import { SelectAIAgent } from "@/components/watermelon/select-ai-agent"
+import { GenderGlyph } from "@/components/gender-glyph"
 import { splitFlag, useCasprState, type Api } from "@/api"
 import { commandSlug, commandSlugs, splitCommands } from "@/commands"
 
@@ -30,7 +31,16 @@ export function Overlay({ api }: { api: Api }) {
 
   const agents = state.voices.map((v) => {
     const [flag, name] = splitFlag(v.name)
-    return { id: v.id, name, icon: <span aria-hidden>{flag}</span> }
+    return {
+      id: v.id,
+      name,
+      icon: (
+        <span className="flex items-center gap-0.5">
+          <span aria-hidden>{flag}</span>
+          <GenderGlyph gender={v.gender} size={12} />
+        </span>
+      ),
+    }
   })
 
   return (

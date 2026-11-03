@@ -97,7 +97,7 @@ export const SelectAIAgent: React.FC<SelectAIAgentProps> = ({
                     onSelectAgent?.(agent.id);
                     setIsMenuOpen(false);
                   }}
-                  className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-xl transition-all active:scale-95 ${
+                  className={`flex h-10 min-w-10 shrink-0 items-center justify-center rounded-md px-1.5 text-xl transition-all active:scale-95 ${
                     selectedAgent.id === agent.id
                       ? 'border-primary/70 bg-primary/[0.04] border shadow-glow'
                       : 'hover:bg-accent'
@@ -116,7 +116,7 @@ export const SelectAIAgent: React.FC<SelectAIAgentProps> = ({
               layoutId={`agent-${selectedAgent.id}`}
               title={`Voice: ${selectedAgent.name}`}
               onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="bg-muted border-border flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-md border text-xl"
+              className="bg-muted border-border flex h-10 min-w-10 shrink-0 cursor-pointer items-center justify-center rounded-md border px-1.5 text-xl"
             >
               {selectedAgent.icon}
             </motion.button>

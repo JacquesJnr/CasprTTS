@@ -9,6 +9,7 @@ class VoiceOption:
     name: str
     detail: str
     model_path: str
+    gender: str = ""  # "male" / "female" for known voices; empty for custom ones
 
     @property
     def menu_label(self) -> str:
@@ -16,10 +17,10 @@ class VoiceOption:
 
 
 KNOWN_VOICES = {
-    "en_GB-alan-medium": ("🇬🇧 Alan", "British male"),
-    "en_GB-jenny_dioco-medium": ("🇬🇧 Jenny", "Irish female"),
-    "en_US-amy-medium": ("🇺🇸 Amy", "American female"),
-    "en_US-hfc_male-medium": ("🇺🇸 Dan", "American male"),
+    "en_GB-alan-medium": ("🇬🇧 Alan", "British male", "male"),
+    "en_GB-jenny_dioco-medium": ("🇬🇧 Jenny", "Irish female", "female"),
+    "en_US-amy-medium": ("🇺🇸 Amy", "American female", "female"),
+    "en_US-hfc_male-medium": ("🇺🇸 Dan", "American male", "male"),
 }
 
 
@@ -32,9 +33,9 @@ def discover_voices(current_model_path: str = "") -> list[VoiceOption]:
 
     voices: list[VoiceOption] = []
     for model in models:
-        name, detail = KNOWN_VOICES.get(
+        name, detail, gender = KNOWN_VOICES.get(
             model.stem,
-            (model.stem.replace("_", " ").replace("-", " ").title(), "Custom Piper voice"),
+            (model.stem.replace("_", " ").replace("-", " ").title(), "Custom Piper voice", ""),
         )
-        voices.append(VoiceOption(name=name, detail=detail, model_path=str(model)))
+        voices.append(VoiceOption(name=name, detail=detail, model_path=str(model), gender=gender))
     return voices

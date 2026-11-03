@@ -3,6 +3,7 @@ import { motion } from "motion/react"
 import { Mic, Play, Plus, Trash2 } from "lucide-react"
 
 import { KnobSlider } from "@/components/watermelon/knob-slider"
+import { GenderGlyph } from "@/components/gender-glyph"
 import { Switch } from "@/components/ui/switch"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { commandSlug } from "@/commands"
@@ -201,7 +202,10 @@ export function Settings({ api }: { api: Api }) {
                         className="absolute -inset-px rounded-md border border-primary/70 bg-primary/[0.04] shadow-glow"
                       />
                     )}
-                    <span className="relative text-xl" aria-hidden>{flag}</span>
+                    <span className="relative flex items-center gap-1">
+                      <span className="text-xl" aria-hidden>{flag}</span>
+                      <GenderGlyph gender={v.gender} />
+                    </span>
                     <span className="relative flex flex-col">
                       <span className="text-[13px] font-[510]">{name}</span>
                       <span className="text-[12px] text-muted-foreground">{v.detail}</span>

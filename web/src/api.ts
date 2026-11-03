@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react"
 
-export type Voice = { id: string; name: string; detail: string }
+export type Voice = { id: string; name: string; detail: string; gender: "male" | "female" | "" }
 export type QuickOption = { name: string; phrases: string[] }
 export const MAX_QUICK_OPTIONS = 5
 export type Config = {

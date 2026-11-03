@@ -80,7 +80,7 @@ class CasprWeb:
         return {
             "config": asdict(self.config),
             "voices": [
-                {"id": v.model_path, "name": v.name, "detail": v.detail}
+                {"id": v.model_path, "name": v.name, "detail": v.detail, "gender": v.gender}
                 for v in discover_voices(self.config.model_path)
             ],
             "outputs": [{"name": "", "description": "System default"}] + [
