@@ -1,20 +1,26 @@
-import { useState, type CSSProperties, type ReactNode } from "react"
+import { useEffect, useState, type CSSProperties, type ReactNode } from "react"
 import { motion } from "motion/react"
-import { Mic } from "lucide-react"
+import { Mic, Play, Plus, Trash2 } from "lucide-react"
 
 import { KnobSlider } from "@/components/watermelon/knob-slider"
 import { Switch } from "@/components/ui/switch"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { splitFlag, useCasprState, type Api } from "@/api"
+import { commandSlug } from "@/commands"
+import { MAX_QUICK_OPTIONS, splitFlag, useCasprState, type Api, type QuickOption } from "@/api"
 
 // Radix Select reserves "" for "no value", so the default output gets a sentinel.
 const DEFAULT_OUTPUT = "__default__"
 
-function Module({ index, title, action, children }: {
-  index: string; title: string; action?: ReactNode; children: ReactNode
+function Module({ id, highlighted, index, title, action, children }: {
+  id?: string; highlighted?: boolean; index: string; title: string; action?: ReactNode; children: ReactNode
 }) {
   return (
-    <section className="rounded-xl border border-border bg-card p-3 shadow-lift">
+    <section
+      id={id}
+      className={`scroll-mt-4 rounded-xl border bg-card p-3 transition-[border-color,box-shadow] duration-700 ${
+        highlighted ? "border-primary/60 shadow-glow" : "border-border shadow-lift"
+      }`}
+    >
       <header className="mb-3 flex min-h-8 items-center justify-between gap-2 px-1">
         <h2 className="text-[15px] font-[510]">
           <span className="mr-1.5 font-mono text-[12px] text-fog">{index}</span>{title}
@@ -57,9 +63,83 @@ const button = "rounded-md px-3.5 py-1.5 text-[13px] font-[510] transition outli
 const primary = `${button} bg-primary text-primary-foreground shadow-glow hover:brightness-110`
 const subtle = `${button} border border-input bg-secondary text-steel hover:bg-accent`
 
+const field = "rounded-md border border-input bg-muted px-3 py-2 text-[13px] outline-none transition placeholder:text-fog focus:border-primary/70 focus:shadow-glow"
+const iconButton = "flex size-8 shrink-0 items-center justify-center rounded-md border border-input bg-secondary text-steel outline-none transition hover:bg-accent focus-visible:shadow-glow disabled:opacity-40"
+
+// Drafts commit on blur so typing (e.g. a new line) isn't normalized away mid-edit.
+function QuickOptionEditor({ option, onChange, onRemove, onSay }: {
+  option: QuickOption
+  onChange: (option: QuickOption) => void
+  onRemove: () => void
+  onSay: () => void
+}) {
+  const savedPhrases = option.phrases.join("\n")
+  const [name, setName] = useState(option.name)
+  const [phrases, setPhrases] = useState(savedPhrases)
+  // Re-sync when the saved value changes (own commit, deletion shifting rows, other window).
+  useEffect(() => setName(option.name), [option.name])
+  useEffect(() => setPhrases(savedPhrases), [savedPhrases])
+  const commit = () => onChange({ name: name.trim(), phrases: phrases.split("\n").map((p) => p.trim()).filter(Boolean) })
+
+  return (
+    <motion.div
+      layout
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="flex flex-col gap-2 rounded-md border border-border bg-muted p-2.5"
+    >
+      <div className="flex items-center gap-2">
+        <input
+          autoFocus={!option.name}
+          aria-label="Category name"
+          placeholder="Category name, e.g. Greeting"
+          maxLength={24}
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          onBlur={commit}
+          onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
+          className={`${field} min-w-0 flex-1 font-[510]`}
+        />
+        <button className={iconButton} title="Say a random phrase now" disabled={!option.phrases.length} onClick={onSay}>
+          <Play size={14} />
+        </button>
+        <button className={`${iconButton} hover:text-destructive`} title="Delete category" onClick={onRemove}>
+          <Trash2 size={14} />
+        </button>
+      </div>
+      <textarea
+        aria-label={`${name || "Category"} phrases, one per line`}
+        placeholder={"One phrase per line\nHello\nHey there"}
+        rows={Math.min(6, Math.max(3, phrases.split("\n").length))}
+        value={phrases}
+        onChange={(e) => setPhrases(e.target.value)}
+        onBlur={commit}
+        className={`${field} resize-none leading-relaxed`}
+      />
+      <span className="px-1 font-mono text-[11px] text-fog">
+        {option.phrases.length} phrase{option.phrases.length === 1 ? "" : "s"} · one picked at random
+        {option.name && <> · type <span className="text-primary">/{commandSlug(option.name)}</span> in a message</>}
+      </span>
+    </motion.div>
+  )
+}
+
 export function Settings({ api }: { api: Api }) {
   const { state, set, error } = useCasprState(api)
   const [sampling, setSampling] = useState(false)
+  const [highlight, setHighlight] = useState("")
+
+  // Jump to a section on request (e.g. the overlay's "+" chip) and briefly glow it.
+  useEffect(() => {
+    if (!state) return
+    window.casprFocus = (section) => {
+      document.getElementById(section)?.scrollIntoView({ behavior: "smooth", block: "start" })
+      setHighlight(section)
+      setTimeout(() => setHighlight(""), 1400)
+    }
+    api.take_focus_section().then((section) => section && window.casprFocus?.(section))
+  }, [api, !state]) // eslint-disable-line react-hooks/exhaustive-deps
+
   if (!state) return null
   const { config } = state
   const outputValue = !config.local_output
@@ -199,6 +279,30 @@ export function Settings({ api }: { api: Api }) {
             <div className="flex items-center justify-between px-1 pt-1 text-[13px] text-steel">
               Overlay shortcut <Badge>SUPER + ALT + T</Badge>
             </div>
+          </Module>
+
+          <Module id="quick-options" highlighted={highlight === "quick-options"} index="04" title="Quick options" action={
+            <button
+              className={subtle}
+              disabled={config.quick_options.length >= MAX_QUICK_OPTIONS}
+              onClick={() => set("quick_options", [...config.quick_options, { name: "", phrases: [] }])}
+            >
+              <span className="flex items-center gap-1.5"><Plus size={14} />Add category</span>
+            </button>
+          }>
+            <p className="px-1 text-[12px] text-muted-foreground">
+              Categories become chips under the message box (Alt+1–5) and /commands you can type inside a message. Each use says a random phrase in the selected voice.
+              <span className="ml-1 font-mono text-fog">{config.quick_options.length}/{MAX_QUICK_OPTIONS}</span>
+            </p>
+            {config.quick_options.map((option, i) => (
+              <QuickOptionEditor
+                key={i}
+                option={option}
+                onChange={(next) => set("quick_options", config.quick_options.map((o, j) => (j === i ? next : o)))}
+                onRemove={() => set("quick_options", config.quick_options.filter((_, j) => j !== i))}
+                onSay={() => api.speak_quick(i)}
+              />
+            ))}
           </Module>
         </div>
       </main>

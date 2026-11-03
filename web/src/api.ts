@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from "react"
 
 export type Voice = { id: string; name: string; detail: string }
+export type QuickOption = { name: string; phrases: string[] }
+export const MAX_QUICK_OPTIONS = 5
 export type Config = {
   model_path: string
   microsoft_voice_id: string
@@ -9,6 +11,7 @@ export type Config = {
   speech_volume: number
   playback_delay_seconds: number
   debug_notifications: boolean
+  quick_options: QuickOption[]
 }
 export type State = {
   config: Config
@@ -22,8 +25,11 @@ export type Api = {
   state: () => Promise<State>
   set: <K extends keyof Config>(name: K, value: Config[K]) => Promise<void>
   speak: (text: string) => Promise<void>
+  speak_quick: (index: number) => Promise<void>
   sample: () => Promise<void>
   open_overlay: () => Promise<void>
+  open_settings: (section?: string) => Promise<void>
+  take_focus_section: () => Promise<string>
   close: () => Promise<void>
   quit: () => Promise<void>
 }
@@ -33,6 +39,7 @@ declare global {
     pywebview?: { api: Api }
     casprError?: (message: string) => void
     casprRefresh?: () => void
+    casprFocus?: (section: string) => void
   }
 }
 
