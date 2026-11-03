@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react"
+import { useState, type CSSProperties, type ReactNode } from "react"
 import { motion } from "motion/react"
 import { Mic } from "lucide-react"
 
@@ -10,18 +10,18 @@ import { splitFlag, useCasprState, type Api } from "@/api"
 // Radix Select reserves "" for "no value", so the default output gets a sentinel.
 const DEFAULT_OUTPUT = "__default__"
 
-function Module({ index, title, tone, action, children }: {
-  index: string; title: string; tone: string; action?: ReactNode; children: ReactNode
+function Module({ index, title, action, children }: {
+  index: string; title: string; action?: ReactNode; children: ReactNode
 }) {
   return (
-    <section className="rounded-[22px] border border-border bg-card p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
-      <header className="mb-3 flex min-h-9 items-center justify-between gap-2 px-1">
-        <h2 className={`text-[15px] font-semibold tracking-wide ${tone}`}>
-          <span className="font-mono text-[12px] opacity-70">{index} /</span> {title}
+    <section className="rounded-xl border border-border bg-card p-3 shadow-lift">
+      <header className="mb-3 flex min-h-8 items-center justify-between gap-2 px-1">
+        <h2 className="text-[15px] font-[510]">
+          <span className="mr-1.5 font-mono text-[12px] text-fog">{index}</span>{title}
         </h2>
         {action}
       </header>
-      <div className="flex flex-col gap-3">{children}</div>
+      <div className="flex flex-col gap-2">{children}</div>
     </section>
   )
 }
@@ -29,16 +29,16 @@ function Module({ index, title, tone, action, children }: {
 function Field({ label, help, children }: { label: string; help?: string; children: ReactNode }) {
   return (
     <div className="flex flex-col gap-1.5">
-      <span className="px-1 text-[13px] font-medium">{label}</span>
+      <span className="px-1 text-[13px] text-steel">{label}</span>
       {children}
-      {help && <span className="px-1 text-[11px] text-muted-foreground">{help}</span>}
+      {help && <span className="px-1 text-[12px] text-muted-foreground">{help}</span>}
     </div>
   )
 }
 
-function Chip({ children }: { children: ReactNode }) {
+function Badge({ children }: { children: ReactNode }) {
   return (
-    <code className="rounded-lg border border-border bg-muted px-2.5 py-1 font-mono text-[12px] text-muted-foreground select-all">
+    <code className="rounded-[4px] bg-gunmetal px-1.5 py-0.5 font-mono text-[12px] text-muted-foreground select-all">
       {children}
     </code>
   )
@@ -46,14 +46,16 @@ function Chip({ children }: { children: ReactNode }) {
 
 function ToggleRow({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
   return (
-    <label className="flex cursor-pointer items-center justify-between gap-3 rounded-xl bg-muted px-3 py-2.5 text-[13px]">
+    <label className="flex cursor-pointer items-center justify-between gap-3 rounded-md border border-border bg-muted px-3 py-2.5 text-[13px]">
       {label}
       <Switch checked={checked} onCheckedChange={onChange} />
     </label>
   )
 }
 
-const button = "rounded-[10px] px-4 py-2 text-[13px] font-semibold shadow-[inset_0_-2px_0_rgba(0,0,0,0.35)] transition active:translate-y-px disabled:opacity-50"
+const button = "rounded-md px-3.5 py-1.5 text-[13px] font-[510] transition outline-none focus-visible:shadow-glow disabled:opacity-50"
+const primary = `${button} bg-primary text-primary-foreground shadow-glow hover:brightness-110`
+const subtle = `${button} border border-input bg-secondary text-steel hover:bg-accent`
 
 export function Settings({ api }: { api: Api }) {
   const { state, set, error } = useCasprState(api)
@@ -73,24 +75,26 @@ export function Settings({ api }: { api: Api }) {
     <div className="flex h-svh flex-col">
       <main className="flex-1 overflow-y-auto">
         <div className="mx-auto flex max-w-[640px] flex-col gap-3 p-4">
-          <header className="flex items-center gap-3.5 px-1 pb-1">
-            <div className="flex size-10 items-center justify-center rounded-xl border border-border bg-secondary text-coral">
-              <Mic size={20} />
+          <header className="flex items-center gap-3 px-1 pb-1">
+            <div className="flex size-9 items-center justify-center rounded-md border border-border bg-card">
+              <Mic size={18} />
             </div>
             <div className="flex-1">
-              <h1 className="text-[22px] leading-none font-bold tracking-[0.25em] text-coral">CASPR</h1>
-              <p className="mt-1 text-[11px] tracking-[0.18em] text-muted-foreground">YOUR WORDS. A LITTLE MORE SOUL.</p>
+              <h1 className="text-[20px] leading-none font-[590] tracking-[-0.02em]">Caspr</h1>
+              <p className="mt-1 text-[12px] text-muted-foreground">Your words. A little more soul.</p>
             </div>
-            <span className="rounded-full border border-amber/40 px-2.5 py-1 font-mono text-[11px] text-amber">TTS / OFFLINE</span>
+            <span className="flex items-center gap-1.5 rounded-[4px] bg-gunmetal px-1.5 py-0.5 font-mono text-[11px] text-muted-foreground">
+              <span className="size-1.5 rounded-full bg-primary shadow-glow-sm" />TTS · offline
+            </span>
           </header>
 
           {error && (
-            <p role="alert" className="rounded-xl border border-destructive/40 bg-muted px-3 py-2 text-[12px] text-destructive">{error}</p>
+            <p role="alert" className="rounded-md border border-destructive/40 bg-muted px-3 py-2 text-[12px] text-destructive">{error}</p>
           )}
 
-          <Module index="01" title="Piper voice" tone="text-coral" action={
+          <Module index="01" title="Piper voice" action={
             <button
-              className={`${button} bg-primary text-primary-foreground`}
+              className={subtle}
               disabled={!state.voices.length || sampling}
               title="Hear “I love text-to-speech” through headphones only"
               onClick={sample}
@@ -108,19 +112,19 @@ export function Settings({ api }: { api: Api }) {
                     role="radio"
                     aria-checked={active}
                     onClick={() => set("model_path", v.id)}
-                    className="relative flex items-center gap-3 rounded-xl bg-muted px-3 py-2.5 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    className="relative flex items-center gap-3 rounded-md border border-border bg-muted px-3 py-2.5 text-left outline-none hover:bg-accent/40 focus-visible:shadow-glow"
                   >
                     {active && (
                       <motion.span
                         layoutId="voice-active"
                         transition={{ type: "spring", stiffness: 500, damping: 35 }}
-                        className="absolute inset-0 rounded-xl border border-coral bg-coral/10"
+                        className="absolute -inset-px rounded-md border border-primary/70 bg-primary/[0.04] shadow-glow"
                       />
                     )}
-                    <span className="relative text-2xl" aria-hidden>{flag}</span>
+                    <span className="relative text-xl" aria-hidden>{flag}</span>
                     <span className="relative flex flex-col">
-                      <span className="text-[13px] font-semibold">{name}</span>
-                      <span className="text-[11px] text-muted-foreground">{v.detail}</span>
+                      <span className="text-[13px] font-[510]">{name}</span>
+                      <span className="text-[12px] text-muted-foreground">{v.detail}</span>
                     </span>
                   </button>
                 )
@@ -144,8 +148,8 @@ export function Settings({ api }: { api: Api }) {
             </Field>
           </Module>
 
-          <Module index="02" title="Audio" tone="text-aqua" action={
-            <span className="flex items-center gap-2 text-[11px] text-muted-foreground">Discord input <Chip>{state.discordInput}</Chip></span>
+          <Module index="02" title="Audio" action={
+            <span className="flex items-center gap-2 text-[12px] text-muted-foreground">Discord input <Badge>{state.discordInput}</Badge></span>
           }>
             <div className="flex items-center gap-4">
               <div className="flex flex-col items-center gap-1">
@@ -155,10 +159,10 @@ export function Settings({ api }: { api: Api }) {
                   onChange={(v) => set("speech_volume", v)}
                   size={150}
                 />
-                <span className="text-[11px] tracking-[0.18em] text-aqua">VOLUME</span>
+                <span className="font-mono text-[11px] text-fog">VOLUME</span>
               </div>
-              <div className="flex flex-1 flex-col gap-3">
-                <p className="px-1 text-[11px] text-muted-foreground">Mic + headphones · 0% mutes · Applies to next playback</p>
+              <div className="flex flex-1 flex-col gap-2">
+                <p className="px-1 text-[12px] text-muted-foreground">Mic + headphones · 0% mutes · Applies to next playback</p>
                 <ToggleRow label="Hear speech in headphones" checked={config.local_monitor} onChange={(v) => set("local_monitor", v)} />
                 <Field label="Headphone output">
                   <Select
@@ -177,30 +181,31 @@ export function Settings({ api }: { api: Api }) {
             </div>
           </Module>
 
-          <Module index="03" title="Behavior" tone="text-lime">
+          <Module index="03" title="Behavior">
             <Field label="Playback delay">
-              <div className="flex items-center gap-3 rounded-xl bg-muted px-3 py-2.5">
+              <div className="flex items-center gap-3 rounded-md border border-border bg-muted px-3 py-2.5">
                 <input
                   type="range" min={0} max={3} step={0.1}
                   aria-label="Playback delay in seconds"
                   value={config.playback_delay_seconds}
                   onChange={(e) => set("playback_delay_seconds", Number(e.target.value))}
-                  className="flex-1 accent-lime"
+                  className="caspr-range flex-1"
+                  style={{ "--fill": `${(config.playback_delay_seconds / 3) * 100}%` } as CSSProperties}
                 />
-                <span className="w-12 text-right font-mono text-[12px] text-lime">{config.playback_delay_seconds.toFixed(1)}s</span>
+                <span className="w-10 text-right font-mono text-[12px] text-steel">{config.playback_delay_seconds.toFixed(1)}s</span>
               </div>
             </Field>
             <ToggleRow label="Show debug error notifications" checked={config.debug_notifications} onChange={(v) => set("debug_notifications", v)} />
-            <div className="flex items-center justify-between px-1 text-[13px] font-medium">
-              Overlay shortcut <Chip>SUPER + ALT + T</Chip>
+            <div className="flex items-center justify-between px-1 pt-1 text-[13px] text-steel">
+              Overlay shortcut <Badge>SUPER + ALT + T</Badge>
             </div>
           </Module>
         </div>
       </main>
 
       <footer className="flex justify-between border-t border-border bg-card px-4 py-3">
-        <button className={`${button} bg-secondary text-destructive`} onClick={() => api.quit()}>Quit</button>
-        <button className={`${button} bg-primary text-primary-foreground`} onClick={() => api.open_overlay()}>Open message box</button>
+        <button className={`${button} text-muted-foreground hover:bg-accent hover:text-destructive`} onClick={() => api.quit()}>Quit</button>
+        <button className={primary} onClick={() => api.open_overlay()}>Open message box</button>
       </footer>
     </div>
   )

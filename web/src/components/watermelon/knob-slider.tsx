@@ -206,12 +206,12 @@ export const KnobSlider: React.FC<KnobSliderProps> = ({
         setDragging(true);
         updateFromPointer(e.clientX, e.clientY);
       }}
-      className="relative flex cursor-pointer items-center justify-center rounded-full outline-none select-none focus-visible:ring-2 focus-visible:ring-ring"
+      className="relative flex cursor-pointer items-center justify-center rounded-full outline-none select-none focus-visible:shadow-glow"
       style={{ width: size, height: size }}
     >
       <svg
         viewBox="0 0 100 100"
-        className="text-muted-foreground pointer-events-none absolute inset-0 h-full w-full"
+        className="text-gunmetal pointer-events-none absolute inset-0 h-full w-full"
       >
         {Array.from({ length: tickCount }).map((_, i) => {
           const angle = START + (i * SWEEP) / (tickCount - 1);
@@ -228,6 +228,7 @@ export const KnobSlider: React.FC<KnobSliderProps> = ({
               strokeWidth="0.9"
               strokeLinecap="round"
               opacity={lit ? 1 : 0.45}
+              style={lit ? { filter: 'drop-shadow(0 0 1.2px rgb(228 242 34 / 0.9))' } : undefined}
             />
           );
         })}
@@ -240,6 +241,7 @@ export const KnobSlider: React.FC<KnobSliderProps> = ({
         <div
           className="border-b-primary absolute left-1/2 -translate-x-1/2 border-r-transparent border-l-transparent"
           style={{
+            filter: 'drop-shadow(0 0 3px rgb(228 242 34 / 0.8))',
             top: size * 0.12,
             borderLeftWidth: size * 0.025,
             borderRightWidth: size * 0.025,
@@ -250,7 +252,7 @@ export const KnobSlider: React.FC<KnobSliderProps> = ({
       </div>
 
       <div
-        className="bg-secondary relative flex items-center justify-center rounded-full shadow-[inset_0_-3px_0_rgba(0,0,0,0.35)]"
+        className="bg-popover relative flex items-center justify-center rounded-full shadow-[0_2px_4px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.04)]"
         style={{
           width: innerSize,
           height: innerSize,

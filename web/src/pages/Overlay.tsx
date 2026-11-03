@@ -23,14 +23,14 @@ export function Overlay({ api }: { api: Api }) {
           }}
           onEscape={() => api.close()}
           footer={
-            <p className="mt-2.5 flex justify-between px-1 font-mono text-[11px] text-muted-foreground">
-              <span className={error ? "text-destructive" : "tracking-[0.2em] text-coral"}>{error || "CASPR"}</span>
+            <p className="mt-2 flex justify-between px-1 font-mono text-[11px] text-muted-foreground">
+              <span className={error ? "text-destructive" : "text-fog"}>{error || "caspr"}</span>
               <span>Enter speak · Esc close</span>
             </p>
           }
         />
       ) : (
-        <p className="rounded-xl bg-card p-4 text-sm text-muted-foreground">No Piper voices found in data/voices</p>
+        <p className="rounded-xl border border-border bg-card p-4 text-sm text-muted-foreground">No Piper voices found in data/voices</p>
       )}
     </main>
   )
