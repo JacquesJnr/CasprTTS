@@ -1,4 +1,4 @@
-# Caspr TTS
+![CasprTTS](docs/Banner.png)
 
 A keyboard-first text-to-speech message box for Omarchy. Type a message, press
 Enter, and Caspr speaks it through a PipeWire virtual microphone that Discord
