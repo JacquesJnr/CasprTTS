@@ -31,8 +31,9 @@ dist = root / "web" / "dist"
 if not (dist / "index.html").is_file():
     raise SystemExit("Build the UI first: npm --prefix web ci && npm --prefix web run build")
 datas += [(str(dist), "web/dist")]
-# x64 only: drop pywebview/clr_loader binaries for other architectures and Android.
-SKIP = ("win-arm64", "win-x86", "x86.dll", "pywebview-android.jar", "dlls/x86", ".pdb")
+# Drop pywebview's Android jar and debug symbols. Keep every webview/lib/runtimes/<arch> folder:
+# webview.platforms.edgechromium adds all three to PATH at import and fails if one is missing.
+SKIP = ("pywebview-android.jar", ".pdb")
 a = Analysis(
     [str(root / "packaging/windows/launcher.py")],
     pathex=[str(root / "src")], binaries=binaries, datas=datas,
