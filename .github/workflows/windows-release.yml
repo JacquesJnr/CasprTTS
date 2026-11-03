@@ -1,0 +1,128 @@
+name: Windows build and release
+
+on:
+  push:
+    branches: ['**']
+    tags: ['windows-v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-${{ github.ref }}
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
+
+jobs:
+  build:
+    runs-on: windows-2022
+    timeout-minutes: 35
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.11.9'
+          architecture: x64
+          cache: pip
+          cache-dependency-path: requirements-windows*.txt
+      - name: Set artifact version
+        id: version
+        env:
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          $version = '0.1.0-dev.${{ github.run_number }}'
+          if ($env:REF_TYPE -eq 'tag') {
+            if ($env:REF_NAME -notmatch '^windows-v(\d+\.\d+\.\d+([.-][A-Za-z0-9.-]+)?)$') { throw 'Invalid Windows release tag' }
+            $version = $Matches[1]
+          }
+          "version=$version" >> $env:GITHUB_OUTPUT
+      # Vite 8 needs Node 20.19+/22.12+; tag-pinned (other actions are SHA-pinned).
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Build web UI
+        run: |
+          npm --prefix web ci
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          npm --prefix web run build
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+      - name: Install locked dependencies and application
+        run: |
+          # proxy_tools (pywebview dependency) only exists as a hash-pinned source archive; it builds
+          # with the setuptools bundled in Python 3.11, so no unpinned build tools are downloaded.
+          python -m pip install --require-hashes --only-binary=:all: --no-binary=proxy-tools --no-build-isolation -r requirements-windows-build.txt
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          python -m pip install --no-deps --no-build-isolation .
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          python -m pip check
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+      - name: Run tests
+        run: |
+          python -m pytest -q
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+      - name: Install verified Inno Setup 6.4.3
+        run: |
+          $file = Join-Path $env:RUNNER_TEMP 'innosetup-6.4.3.exe'
+          Invoke-WebRequest 'https://github.com/jrsoftware/issrc/releases/download/is-6_4_3/innosetup-6.4.3.exe' -OutFile $file
+          if ((Get-FileHash $file -Algorithm SHA256).Hash -ne 'F3C42116542C4CC57263C5BA6C4FEABFC49FE771F2F98A79D2F7628B8762723B') { throw 'Inno Setup checksum mismatch' }
+          $p = Start-Process $file -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/ALLUSERS' -PassThru -Wait
+          if ($p.ExitCode -ne 0) { throw 'Inno Setup install failed' }
+      - name: Build executable, smoke test and installer
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: ./packaging/windows/build.ps1 -Version $env:VERSION
+      - name: Verify install, upgrade and uninstall
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: ./packaging/windows/verify-installer.ps1 -Installer "dist/release/Caspr-TTS-$env:VERSION-windows-x64-setup.exe"
+      - name: Upload release candidates
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: windows-x64-${{ steps.version.outputs.version }}
+          path: dist/release/*
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+      - name: Upload diagnostics
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: windows-diagnostics-${{ github.run_number }}
+          path: |
+            build/windows/*.json
+            build/windows/*.log
+            build/windows/pyinstaller/**/*.txt
+            build/windows/pyinstaller/**/*.html
+          if-no-files-found: ignore
+
+  # Only an explicitly pushed windows-v... tag can publish. Dispatch/branch/PR
+  # builds have no write token and can only upload Actions artifacts.
+  publish:
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/windows-v')
+    needs: build
+    runs-on: ubuntu-24.04
+    environment: windows-release
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          pattern: windows-x64-*
+          path: release
+          merge-multiple: true
+      - name: Verify checksums and publish prerelease assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          cd release
+          sha256sum --check SHA256SUMS.txt
+          gh release create "$RELEASE_TAG" ./* --verify-tag --prerelease --title "Caspr TTS ${RELEASE_TAG#windows-v} for Windows" --notes "Windows x64 release candidate. Download the setup.exe installer; Python is bundled. See WINDOWS_BUILD.md in the directory bundle for setup and validation limits. This CI build is unsigned. Models and optional audio drivers are not bundled. Hardware audio routing and Microsoft James require target-PC validation."

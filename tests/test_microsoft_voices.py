@@ -74,3 +74,12 @@ def test_iteration_failure_does_not_expose_partial_list(monkeypatch):
     result = microsoft_voices.discover_microsoft_voices()
     assert not result.voices
     assert "could not be loaded" in result.unavailable_reason
+
+
+def test_gender_is_reported_when_available(monkeypatch):
+    install_api(monkeypatch, [
+        SimpleNamespace(id="james", display_name="Microsoft James", language="en-GB", gender=0),
+        SimpleNamespace(id="hazel", display_name="Microsoft Hazel", language="en-GB", gender=1),
+        SimpleNamespace(id="other", display_name="Other", language="en-US"),
+    ])
+    assert [v.gender for v in microsoft_voices.discover_microsoft_voices().voices] == ["male", "female", ""]

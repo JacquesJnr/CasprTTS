@@ -7,7 +7,7 @@ import { GenderGlyph } from "@/components/gender-glyph"
 import { Switch } from "@/components/ui/switch"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { commandSlug } from "@/commands"
-import { MAX_QUICK_OPTIONS, splitFlag, useCasprState, type Api, type QuickOption } from "@/api"
+import { flagForLanguage, MAX_QUICK_OPTIONS, splitFlag, useCasprState, type Api, type QuickOption, type Voice } from "@/api"
 
 // Radix Select reserves "" for "no value", so the default output gets a sentinel.
 const DEFAULT_OUTPUT = "__default__"
@@ -66,6 +66,59 @@ const subtle = `${button} border border-input bg-secondary text-steel hover:bg-a
 
 const field = "rounded-md border border-input bg-muted px-3 py-2 text-[13px] outline-none transition placeholder:text-fog focus:border-primary/70 focus:shadow-glow"
 const iconButton = "flex size-8 shrink-0 items-center justify-center rounded-md border border-input bg-secondary text-steel outline-none transition hover:bg-accent focus-visible:shadow-glow disabled:opacity-40"
+
+function VoiceCard({ flag, name, detail, gender, active, onSelect }: {
+  flag: string; name: string; detail: string; gender: Voice["gender"]; active: boolean; onSelect: () => void
+}) {
+  return (
+    <button
+      role="radio"
+      aria-checked={active}
+      onClick={onSelect}
+      className="relative flex items-center gap-3 rounded-md border border-border bg-muted px-3 py-2.5 text-left outline-none hover:bg-accent/40 focus-visible:shadow-glow"
+    >
+      {active && (
+        <motion.span
+          layoutId="voice-active"
+          transition={{ type: "spring", stiffness: 500, damping: 35 }}
+          className="absolute -inset-px rounded-md border border-primary/70 bg-primary/[0.04] shadow-glow"
+        />
+      )}
+      <span className="relative flex items-center gap-1">
+        <span className="text-xl" aria-hidden>{flag || "🔊"}</span>
+        <GenderGlyph gender={gender} />
+      </span>
+      <span className="relative flex flex-col">
+        <span className="text-[13px] font-[510]">{name}</span>
+        <span className="text-[12px] text-muted-foreground">{detail}</span>
+      </span>
+    </button>
+  )
+}
+
+const regionName = (language: string) => {
+  const region = language.split("-")[1]
+  try {
+    return region ? new Intl.DisplayNames(["en"], { type: "region" }).of(region.toUpperCase()) ?? language : language
+  } catch {
+    return language
+  }
+}
+
+function HotkeyField({ value, onCommit }: { value: string; onCommit: (value: string) => void }) {
+  const [draft, setDraft] = useState(value)
+  useEffect(() => setDraft(value), [value])
+  return (
+    <input
+      aria-label="Overlay shortcut"
+      value={draft}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={() => draft.trim() !== value && onCommit(draft.trim())}
+      onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
+      className="w-40 rounded-[4px] border border-input bg-muted px-2 py-1 text-right font-mono text-[12px] outline-none focus:border-primary/70 focus:shadow-glow"
+    />
+  )
+}
 
 // Drafts commit on blur so typing (e.g. a new line) isn't normalized away mid-edit.
 function QuickOptionEditor({ option, onChange, onRemove, onSay }: {
@@ -143,6 +196,15 @@ export function Settings({ api }: { api: Api }) {
 
   if (!state) return null
   const { config } = state
+  const windows = state.platform === "windows"
+  const provider = config.speech_provider ?? "piper"
+  const useMicrosoft = windows && provider === "microsoft"
+  // Windows samples play only on a separate preview output, never the device Stereo Mix records.
+  const canSample = windows
+    ? Boolean(config.preview_endpoint_id && config.preview_endpoint_id !== config.message_endpoint_id)
+    : state.voices.length > 0
+  const endpointIds = new Set(state.outputs.map((o) => o.name))
+  const endpointValue = (id?: string) => (id && endpointIds.has(id) ? id : undefined)
   const outputValue = !config.local_output
     ? DEFAULT_OUTPUT
     : state.outputs.some((o) => o.name === config.local_output) ? config.local_output : undefined
@@ -173,49 +235,79 @@ export function Settings({ api }: { api: Api }) {
             <p role="alert" className="rounded-md border border-destructive/40 bg-muted px-3 py-2 text-[12px] text-destructive">{error}</p>
           )}
 
-          <Module index="01" title="Piper voice" action={
+          <Module index="01" title={windows ? "Voice" : "Piper voice"} action={
             <button
               className={subtle}
-              disabled={!state.voices.length || sampling}
-              title="Hear “I love text-to-speech” through headphones only"
+              disabled={!canSample || sampling}
+              title={canSample ? "Hear “I love text-to-speech” through headphones only" : "Choose a separate headphone output in Audio first"}
               onClick={sample}
             >
               {sampling ? "Sampling…" : "Sample voice"}
             </button>
           }>
-            <div role="radiogroup" aria-label="Piper voice" className="grid grid-cols-2 gap-2">
-              {state.voices.map((v) => {
-                const [flag, name] = splitFlag(v.name)
-                const active = v.id === config.model_path
-                return (
+            {windows && (
+              <div role="radiogroup" aria-label="Speech provider" className="grid grid-cols-2 gap-1 rounded-md border border-border bg-muted p-1">
+                {(["microsoft", "piper"] as const).map((p) => (
                   <button
-                    key={v.id}
+                    key={p}
                     role="radio"
-                    aria-checked={active}
-                    onClick={() => set("model_path", v.id)}
-                    className="relative flex items-center gap-3 rounded-md border border-border bg-muted px-3 py-2.5 text-left outline-none hover:bg-accent/40 focus-visible:shadow-glow"
+                    aria-checked={provider === p}
+                    onClick={() => set("speech_provider", p)}
+                    className={`rounded-[4px] px-3 py-1.5 text-[13px] outline-none transition focus-visible:shadow-glow ${
+                      provider === p ? "border border-primary/60 bg-secondary text-foreground shadow-glow-sm" : "border border-transparent text-muted-foreground hover:text-foreground"
+                    }`}
                   >
-                    {active && (
-                      <motion.span
-                        layoutId="voice-active"
-                        transition={{ type: "spring", stiffness: 500, damping: 35 }}
-                        className="absolute -inset-px rounded-md border border-primary/70 bg-primary/[0.04] shadow-glow"
-                      />
-                    )}
-                    <span className="relative flex items-center gap-1">
-                      <span className="text-xl" aria-hidden>{flag}</span>
-                      <GenderGlyph gender={v.gender} />
-                    </span>
-                    <span className="relative flex flex-col">
-                      <span className="text-[13px] font-[510]">{name}</span>
-                      <span className="text-[12px] text-muted-foreground">{v.detail}</span>
-                    </span>
+                    {p === "microsoft" ? "Microsoft voices" : "Piper voices"}
                   </button>
-                )
-              })}
-            </div>
+                ))}
+              </div>
+            )}
 
-            <Field
+            {useMicrosoft ? (
+              state.microsoft.voices.length ? (
+                <div role="radiogroup" aria-label="Microsoft voice" className="grid grid-cols-2 gap-2">
+                  {state.microsoft.voices.map((v) => (
+                    <VoiceCard
+                      key={v.id}
+                      flag={flagForLanguage(v.language)}
+                      name={v.name.replace(/^Microsoft\s+/, "")}
+                      detail={regionName(v.language)}
+                      gender={v.gender}
+                      active={v.id === config.microsoft_voice_id}
+                      onSelect={() => set("microsoft_voice_id", v.id)}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <p className="px-1 text-[12px] text-muted-foreground">{state.microsoft.status}</p>
+              )
+            ) : (
+              <div role="radiogroup" aria-label="Piper voice" className="grid grid-cols-2 gap-2">
+                {state.voices.map((v) => {
+                  const [flag, name] = splitFlag(v.name)
+                  return (
+                    <VoiceCard
+                      key={v.id}
+                      flag={flag}
+                      name={name}
+                      detail={v.detail}
+                      gender={v.gender}
+                      active={v.id === config.model_path}
+                      onSelect={() => set("model_path", v.id)}
+                    />
+                  )
+                })}
+              </div>
+            )}
+
+            {windows && !useMicrosoft && (
+              <div className="flex items-center justify-between gap-3 px-1 text-[12px] text-muted-foreground">
+                Add a Piper .onnx voice and its .onnx.json file to the voices folder.
+                <button className={subtle} onClick={() => api.open_voices_folder()}>Open voices folder</button>
+              </div>
+            )}
+
+            {!windows && <Field
               label="Microsoft voices"
               help={`${state.microsoft.status} Microsoft playback is not available yet; messages and samples use Piper.`}
             >
@@ -229,7 +321,10 @@ export function Settings({ api }: { api: Api }) {
                   {state.microsoft.voices.map((v) => <SelectItem key={v.id} value={v.id}>{v.label}</SelectItem>)}
                 </SelectContent>
               </Select>
-            </Field>
+            </Field>}
+            {useMicrosoft && config.microsoft_voice_id && !state.microsoft.voices.some((v) => v.id === config.microsoft_voice_id) && (
+              <p className="px-1 text-[12px] text-destructive">{state.microsoft.status}</p>
+            )}
           </Module>
 
           <Module index="02" title="Audio" action={
@@ -245,6 +340,35 @@ export function Settings({ api }: { api: Api }) {
                 />
                 <span className="font-mono text-[11px] text-fog">VOLUME</span>
               </div>
+              {windows ? (
+              <div className="flex flex-1 flex-col gap-2">
+                <p className="px-1 text-[12px] text-muted-foreground">Discord hears everything the message output plays · 0% mutes</p>
+                <Field label="Message output">
+                  <Select value={endpointValue(config.message_endpoint_id)} onValueChange={(id) => set("message_endpoint_id", id)}>
+                    <SelectTrigger className="w-full bg-muted">
+                      <SelectValue placeholder={config.message_endpoint_id ? "Saved output not connected" : "Output that Stereo Mix records"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {state.outputs.map((o) => <SelectItem key={o.name} value={o.name}>{o.description}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </Field>
+                <ToggleRow label="Hear speech in headphones" checked={config.local_monitor} onChange={(v) => set("local_monitor", v)} />
+                <Field label="Headphone output" help={
+                  config.preview_endpoint_id && config.preview_endpoint_id === config.message_endpoint_id
+                    ? "Choose a different device from the message output." : "Samples play here only."
+                }>
+                  <Select value={endpointValue(config.preview_endpoint_id)} onValueChange={(id) => set("preview_endpoint_id", id)}>
+                    <SelectTrigger className="w-full bg-muted">
+                      <SelectValue placeholder={config.preview_endpoint_id ? "Saved output not connected" : "A different device, e.g. headphones"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {state.outputs.map((o) => <SelectItem key={o.name} value={o.name}>{o.description}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </Field>
+              </div>
+              ) : (
               <div className="flex flex-1 flex-col gap-2">
                 <p className="px-1 text-[12px] text-muted-foreground">Mic + headphones · 0% mutes · Applies to next playback</p>
                 <ToggleRow label="Hear speech in headphones" checked={config.local_monitor} onChange={(v) => set("local_monitor", v)} />
@@ -262,6 +386,7 @@ export function Settings({ api }: { api: Api }) {
                   </Select>
                 </Field>
               </div>
+              )}
             </div>
           </Module>
 
@@ -281,7 +406,8 @@ export function Settings({ api }: { api: Api }) {
             </Field>
             <ToggleRow label="Show debug error notifications" checked={config.debug_notifications} onChange={(v) => set("debug_notifications", v)} />
             <div className="flex items-center justify-between px-1 pt-1 text-[13px] text-steel">
-              Overlay shortcut <Badge>SUPER + ALT + T</Badge>
+              Overlay shortcut
+              {windows ? <HotkeyField value={config.hotkey ?? ""} onCommit={(v) => set("hotkey", v)} /> : <Badge>SUPER + ALT + T</Badge>}
             </div>
           </Module>
 

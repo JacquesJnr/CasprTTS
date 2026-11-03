@@ -16,31 +16,75 @@ import webview
 from .config import AppConfig, expand_slash_commands, normalize_quick_options
 from .history import SessionHistory
 from .microsoft_voices import discover_microsoft_voices
-from .speech import SpeechQueue
-from .voices import discover_voices
+
+WINDOWS = sys.platform == "win32"
 
 
-DIST_INDEX = Path(__file__).resolve().parents[2] / "web" / "dist" / "index.html"
+# Frozen (PyInstaller) builds unpack web/dist under sys._MEIPASS; source checkouts use the repo.
+_ROOT = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parents[2]))
+DIST_INDEX = _ROOT / "web" / "dist" / "index.html"
 # One background instance owns the virtual mic; later launches just ask it to show a window.
 INSTANCE_ADDRESS = (
-    r"\\.\pipe\caspr-tts" if sys.platform == "win32"
+    r"\\.\pipe\caspr-tts" if WINDOWS
     else str(Path(os.environ.get("XDG_RUNTIME_DIR") or tempfile.gettempdir()) / "caspr-tts.sock")
 )
 # Fields the pages may change; everything else in the config stays Python-owned.
 SETTABLE = {
-    "model_path", "microsoft_voice_id", "local_monitor", "local_output",
-    "speech_volume", "playback_delay_seconds", "debug_notifications", "quick_options",
+    "model_path", "microsoft_voice_id", "local_monitor", "speech_volume",
+    "playback_delay_seconds", "debug_notifications", "quick_options",
+    *(("speech_provider", "message_endpoint_id", "preview_endpoint_id", "hotkey") if WINDOWS
+      else ("local_output",)),
 }
+
+
+class LinuxBackend:
+    """PipeWire virtual mic + Piper (Windows: windows_runtime.WindowsBackend)."""
+
+    def __init__(self, config_provider, error_callback) -> None:
+        from .speech import SpeechQueue
+        self.queue = SpeechQueue(config_provider, error_callback)
+        self.discord_input = self.queue.router.discord_source_name
+
+    def prepare(self) -> None:
+        self.queue.router.ensure_virtual_mic()
+
+    def submit(self, text: str) -> None:
+        self.queue.submit(text)
+
+    def sample(self, on_complete) -> None:
+        self.queue.sample(on_complete)
+
+    def stop(self) -> None:
+        self.queue.stop()
+
+    def outputs(self) -> list[dict]:
+        return [{"name": "", "description": "System default"}] + [
+            {"name": o.name, "description": o.description} for o in self.queue.router.outputs()
+        ]
+
+    def voices(self, config: AppConfig) -> list:
+        from .voices import discover_voices
+        return discover_voices(config.model_path)
+
+
+def _platform():
+    if WINDOWS:
+        from .windows_runtime import WindowsBackend, WindowsConfig
+        return WindowsConfig, WindowsBackend
+    return AppConfig, LinuxBackend
 
 
 class CasprWeb:
     def __init__(self) -> None:
-        self.config = AppConfig.load()
-        self.speech = SpeechQueue(lambda: self.config, self.error)
+        config_class, backend_class = _platform()
+        self.config = config_class.load()
+        self.speech = backend_class(lambda: self.config, self.error)
         self.history = SessionHistory(self.config.history_limit)  # typed messages, this session only
         self.microsoft = discover_microsoft_voices()
         self.windows: dict[str, webview.Window] = {}
         self.focus_section = ""  # settings section to scroll to once its page loads
+        self.hotkey = None  # Windows: global shortcut (Linux binds it in the desktop instead)
+        self.tray = None
 
     def open(self, kind: str, hidden: bool = False) -> None:
         if kind in self.windows:
@@ -74,27 +118,46 @@ class CasprWeb:
             value = normalize_quick_options(value)
         else:
             value = type(getattr(self.config, name))(value)
+        if name == "hotkey":
+            from .windows_runtime import parse_hotkey
+            parse_hotkey(value)  # raises a readable error for the page
         setattr(self.config, name, value)
         self.config.save()
+        if name == "hotkey" and self.hotkey:
+            self.hotkey.change(value)
         self.broadcast("window.casprRefresh?.()")
+
+    def notify(self, message: str) -> None:
+        """Always-visible message: a tray balloon on Windows, the error channel elsewhere."""
+        if self.tray:
+            self.tray.notify(message, "Caspr TTS")
+        else:
+            self.error(message)
+
+    def quit(self) -> None:
+        if self.hotkey:
+            self.hotkey.stop()
+        if self.tray:
+            self.tray.stop()
+        for window in list(self.windows.values()):
+            window.destroy()
 
     def state(self) -> dict:
         saved_ms = self.config.microsoft_voice_id
         return {
-            "config": asdict(self.config),
+            "platform": "windows" if WINDOWS else "linux",
+            "config": {k: v for k, v in asdict(self.config).items() if not k.startswith("_")},
             "voices": [
                 {"id": v.model_path, "name": v.name, "detail": v.detail, "gender": v.gender}
-                for v in discover_voices(self.config.model_path)
+                for v in self.speech.voices(self.config)
             ],
-            "outputs": [{"name": "", "description": "System default"}] + [
-                {"name": o.name, "description": o.description}
-                for o in self.speech.router.outputs()
-            ],
+            "outputs": self.speech.outputs(),
             "microsoft": {
-                "voices": [{"id": v.voice_id, "label": v.menu_label} for v in self.microsoft.voices],
+                "voices": [{"id": v.voice_id, "label": v.menu_label, "name": v.name,
+                            "language": v.language, "gender": v.gender} for v in self.microsoft.voices],
                 "status": self.microsoft.selection_status(saved_ms),
             },
-            "discordInput": self.speech.router.discord_source_name,
+            "discordInput": self.speech.discord_input,
         }
 
     def broadcast(self, js: str) -> None:
@@ -167,6 +230,12 @@ class Api:
         if self._kind == "overlay":
             self.close()
 
+    def open_voices_folder(self) -> None:
+        """Windows: Piper models live in %LOCALAPPDATA%\\Caspr TTS\\data\\voices; open it in Explorer."""
+        from .windows_runtime import voice_dir
+        voice_dir().mkdir(parents=True, exist_ok=True)
+        os.startfile(voice_dir())  # type: ignore[attr-defined]  # Windows only
+
     def take_focus_section(self) -> str:
         section, self._app.focus_section = self._app.focus_section, ""
         return section
@@ -178,8 +247,7 @@ class Api:
             window.hide()
 
     def quit(self) -> None:
-        for window in list(self._app.windows.values()):
-            window.destroy()
+        self._app.quit()
 
 
 def _forward_to_running(kind: str) -> bool:
@@ -208,10 +276,14 @@ def main() -> int:
         return 0
     app = CasprWeb()
     try:
-        app.speech.router.ensure_virtual_mic()
+        app.speech.prepare()
     except Exception as error:
         app.error(str(error))
     threading.Thread(target=_serve_instance, args=(app,), daemon=True).start()
+    if WINDOWS:
+        from .windows_shell import WindowsHotkey, start_tray
+        app.tray = start_tray(lambda: app.open("overlay"), lambda: app.open("settings"), app.quit)
+        app.hotkey = WindowsHotkey(app.config.hotkey, lambda: app.open("overlay"), app.notify)
     app.open("overlay", hidden=kind != "overlay")
     if kind == "settings":
         app.open("settings")

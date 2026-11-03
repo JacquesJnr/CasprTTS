@@ -10,6 +10,7 @@ class MicrosoftVoice:
     voice_id: str
     name: str
     language: str
+    gender: str = ""  # "male" / "female" from WinRT VoiceGender, when reported
 
     @property
     def menu_label(self) -> str:
@@ -43,7 +44,8 @@ def discover_microsoft_voices() -> MicrosoftVoiceDiscovery:
         from winrt.windows.media.speechsynthesis import SpeechSynthesizer
 
         voices = tuple(
-            MicrosoftVoice(voice.id, voice.display_name, voice.language)
+            MicrosoftVoice(voice.id, voice.display_name, voice.language,
+                           {0: "male", 1: "female"}.get(int(getattr(voice, "gender", -1)), ""))
             for voice in SpeechSynthesizer.all_voices
         )
     except ImportError:

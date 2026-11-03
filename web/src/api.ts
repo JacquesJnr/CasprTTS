@@ -12,12 +12,19 @@ export type Config = {
   playback_delay_seconds: number
   debug_notifications: boolean
   quick_options: QuickOption[]
+  // Windows only
+  speech_provider?: "piper" | "microsoft"
+  message_endpoint_id?: string
+  preview_endpoint_id?: string
+  hotkey?: string
 }
+export type MicrosoftVoice = { id: string; label: string; name: string; language: string; gender: Voice["gender"] }
 export type State = {
+  platform: "linux" | "windows"
   config: Config
   voices: Voice[]
   outputs: { name: string; description: string }[]
-  microsoft: { voices: { id: string; label: string }[]; status: string }
+  microsoft: { voices: MicrosoftVoice[]; status: string }
   discordInput: string
 }
 export type Api = {
@@ -32,6 +39,7 @@ export type Api = {
   open_overlay: () => Promise<void>
   open_settings: (section?: string) => Promise<void>
   take_focus_section: () => Promise<string>
+  open_voices_folder: () => Promise<void>
   close: () => Promise<void>
   quit: () => Promise<void>
 }
@@ -62,14 +70,27 @@ export function useCasprState(api: Api) {
     window.casprRefresh = refresh
     window.casprError = setError
     refresh()
+    // Re-read voices/outputs when the window comes back, e.g. after plugging in headphones.
+    window.addEventListener("focus", refresh)
+    return () => window.removeEventListener("focus", refresh)
   }, [refresh])
 
   const set = <K extends keyof Config>(name: K, value: Config[K]) => {
     // Optimistic so knobs and switches track the pointer without a round trip.
     setState((s) => s && { ...s, config: { ...s.config, [name]: value } })
-    api.set(name, value)
+    // A rejected setting (e.g. an invalid hotkey) shows its error and restores the saved value.
+    api.set(name, value).catch((e: unknown) => {
+      setError(e instanceof Error ? e.message : String(e))
+      refresh()
+    })
   }
   return { state, set, error, setError }
+}
+
+/** "en-GB" → 🇬🇧 (regional-indicator pair); "" when there is no country part. */
+export function flagForLanguage(language: string) {
+  const country = language.split("-")[1]?.toUpperCase() ?? ""
+  return /^[A-Z]{2}$/.test(country) ? String.fromCodePoint(...[...country].map((c) => 0x1f1a5 + c.charCodeAt(0))) : ""
 }
 
 // "🇬🇧 Alan" → ["🇬🇧", "Alan"]

@@ -4,7 +4,7 @@ import { Plus } from "lucide-react"
 
 import { SelectAIAgent } from "@/components/watermelon/select-ai-agent"
 import { GenderGlyph } from "@/components/gender-glyph"
-import { splitFlag, useCasprState, type Api } from "@/api"
+import { flagForLanguage, splitFlag, useCasprState, type Api } from "@/api"
 import { commandSlug, commandSlugs, splitCommands } from "@/commands"
 
 export function Overlay({ api }: { api: Api }) {
@@ -29,7 +29,18 @@ export function Overlay({ api }: { api: Api }) {
   if (!state) return null
   const known = commandSlugs(state.config.quick_options)
 
-  const agents = state.voices.map((v) => {
+  // On Windows with Microsoft voices selected, the switcher lists those instead of Piper models.
+  const microsoft = state.platform === "windows" && state.config.speech_provider === "microsoft"
+  const agents = microsoft ? state.microsoft.voices.map((v) => ({
+    id: v.id,
+    name: v.name.replace(/^Microsoft\s+/, ""),
+    icon: (
+      <span className="flex items-center gap-0.5">
+        <span aria-hidden>{flagForLanguage(v.language) || "🔊"}</span>
+        <GenderGlyph gender={v.gender} size={12} />
+      </span>
+    ),
+  })) : state.voices.map((v) => {
     const [flag, name] = splitFlag(v.name)
     return {
       id: v.id,
@@ -48,8 +59,8 @@ export function Overlay({ api }: { api: Api }) {
       {agents.length ? (
         <SelectAIAgent
           agents={agents}
-          selectedId={state.config.model_path}
-          onSelectAgent={(id) => set("model_path", id)}
+          selectedId={microsoft ? state.config.microsoft_voice_id : state.config.model_path}
+          onSelectAgent={(id) => set(microsoft ? "microsoft_voice_id" : "model_path", id)}
           onSendMessage={(text) => {
             setError("")
             api.speak(text)
@@ -105,7 +116,7 @@ export function Overlay({ api }: { api: Api }) {
           }
         />
       ) : (
-        <p className="rounded-xl border border-border bg-card p-4 text-sm text-muted-foreground">No Piper voices found in data/voices</p>
+        <p className="rounded-xl border border-border bg-card p-4 text-sm text-muted-foreground">No voices found · add one in Settings</p>
       )}
     </main>
   )

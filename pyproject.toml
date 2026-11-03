@@ -11,6 +11,7 @@ requires-python = ">=3.11"
 [project.scripts]
 quick-tts-mic = "quick_tts_mic.web_app:main"
 quick-tts-mic-gtk = "quick_tts_mic.app:main"
+caspr-windows-probe = "quick_tts_mic.windows_probe:main"
 
 [project.optional-dependencies]
 web = ["pywebview>=6"]
