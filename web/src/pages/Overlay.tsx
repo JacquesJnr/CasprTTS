@@ -31,16 +31,19 @@ export function Overlay({ api }: { api: Api }) {
   const windows = state?.platform === "windows"
   useEffect(() => {
     if (!windows) return
-    let last = 0
+    let requested = 0
     const fit = () => {
       const main = document.querySelector("main")
       if (!main) return
       const rects = [...main.querySelectorAll("*")].map((el) => el.getBoundingClientRect()).filter((r) => r.height > 0)
       if (!rects.length) return
-      const height = Math.ceil(Math.max(...rects.map((r) => r.bottom)) - Math.min(...rects.map((r) => r.top)))
-      if (Math.abs(height - last) > 1) {
-        last = height
-        api.fit_overlay(height)
+      const needed = Math.ceil(Math.max(...rects.map((r) => r.bottom)) - Math.min(...rects.map((r) => r.top)))
+      // The window may end up a few px off what was asked (DPI scaling, rounding); correct by the
+      // measured difference instead of assuming a scale factor.
+      const target = requested ? requested + (needed - window.innerHeight) : needed
+      if (Math.abs(target - requested) > 1) {
+        requested = target
+        api.fit_overlay(target)
       }
     }
     // Re-measure after DOM changes and once more when menu animations settle.
@@ -50,8 +53,12 @@ export function Overlay({ api }: { api: Api }) {
     }
     const observer = new MutationObserver(schedule)
     observer.observe(document.body, { childList: true, subtree: true })
+    window.addEventListener("resize", schedule)
     schedule()
-    return () => observer.disconnect()
+    return () => {
+      observer.disconnect()
+      window.removeEventListener("resize", schedule)
+    }
   }, [api, windows])
 
   if (!state) {

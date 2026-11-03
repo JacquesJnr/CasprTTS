@@ -69,7 +69,7 @@
 }
 
 /* The overlay window is transparent; only its card paints. */
-html:has(.overlay-page), html:has(.overlay-page) body { background: transparent; }
+html:has(.overlay-page), html:has(.overlay-page) body { background: transparent; overflow: hidden; }
 
 @layer base {
   * {

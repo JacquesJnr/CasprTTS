@@ -13,6 +13,7 @@ import queue
 import sys
 import threading
 import time
+import traceback
 import wave
 
 from .config import AppConfig, normalize_quick_options
@@ -223,21 +224,33 @@ class WindowsSpeechQueue:
             request = self.pending.get()
             if request is None:
                 return
+            stage = "output check"
             try:
                 self.status_callback("Synthesizing…")
                 # Validate before synthesizing as well as immediately before playback.
                 self.router.validate(request.config, request.preview, request.preview_verification)
+                stage = f"{request.config.speech_provider} synthesis"
                 data = self.engine.synthesize(request.text, request.config)
                 wav_info(data)
                 remaining = 0 if request.preview else max(0, request.submitted +
                     request.config.playback_delay_seconds - time.monotonic())
                 if self.cancelled.wait(remaining):
                     return
+                stage = "playback"
                 self.status_callback("Playing…")
                 self.router.play(data, request.config, request.preview, request.preview_verification, self.cancelled)
             except Exception as error:
-                self.error_callback(str(error) if isinstance(error, ProbeError) else
-                                    f"Speech or playback failed ({type(error).__name__}). Check the selected voice and outputs.")
+                if isinstance(error, ProbeError):
+                    self.error_callback(str(error))
+                else:
+                    # Messages may contain the spoken text, which never leaves memory; the stage,
+                    # type and stack frames (to caspr.log) are enough to locate the failure.
+                    # Playback errors only describe audio devices (e.g. SoundCard's "Error 0x8889…"),
+                    # so their message is shown; synthesis messages are not.
+                    detail = f"{type(error).__name__}: {error}" if stage == "playback" else type(error).__name__
+                    print(f"{stage} failed: {detail}\n" + "".join(traceback.format_tb(error.__traceback__)),
+                          file=sys.stderr)
+                    self.error_callback(f"{stage.capitalize()} failed ({detail}). Details are in caspr.log.")
             finally:
                 self.status_callback("Ready")
                 if request.on_complete:
