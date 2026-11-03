@@ -37,6 +37,15 @@ SETTABLE = {
 }
 
 
+def window_options(kind: str) -> dict:
+    """pywebview create_window arguments per window; the Windows smoke test renders these too."""
+    if kind == "overlay":
+        return dict(title="Caspr", width=560, height=400, resizable=False, frameless=True,
+                    transparent=True, on_top=True, easy_drag=True)
+    return dict(title="Caspr TTS — Settings", width=620, height=760, min_size=(520, 560),
+                background_color="#08090a")
+
+
 class LinuxBackend:
     """PipeWire virtual mic + Piper (Windows: windows_runtime.WindowsBackend)."""
 
@@ -97,17 +106,8 @@ class CasprWeb:
                 self.windows[kind].run_js("document.querySelector('input')?.focus()")
             return
         url = os.environ.get("CASPR_WEB_URL") or str(DIST_INDEX)
-        if kind == "overlay":
-            window = webview.create_window(
-                "Caspr", url, js_api=Api(self, kind), width=560, height=400,
-                resizable=False, frameless=True, transparent=True, on_top=True,
-                easy_drag=True, hidden=hidden,
-            )
-        else:
-            window = webview.create_window(
-                "Caspr TTS — Settings", url, js_api=Api(self, kind),
-                width=620, height=760, min_size=(520, 560), background_color="#08090a",
-            )
+        window = webview.create_window(url=url, js_api=Api(self, kind), hidden=hidden,
+                                       **window_options(kind))
         window.events.closed += lambda: self.windows.pop(kind, None)
         self.windows[kind] = window
 

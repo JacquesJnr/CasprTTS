@@ -60,6 +60,7 @@ window; **Quit** stops speech and releases the shortcut.
 
 Settings: `%LOCALAPPDATA%\Caspr TTS\config.json`.
 Models: `%LOCALAPPDATA%\Caspr TTS\data\voices`.
+Log (rewritten each launch): `%LOCALAPPDATA%\Caspr TTS\caspr.log`. Include it when reporting a problem.
 Speech stays in memory; the app does not save messages or speech recordings.
 Diagnostic probe WAVs are files you asked for; delete them after testing.
 

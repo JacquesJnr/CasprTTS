@@ -24,24 +24,51 @@ def _report_writer(argv):
     return checkpoint, trace
 
 
+def _log_to_file():
+    """The windowed exe has no console: send pywebview logs and stderr to a file users can share."""
+    import logging
+    root = Path(os.environ.get("LOCALAPPDATA", Path.home())) / "Caspr TTS"
+    root.mkdir(parents=True, exist_ok=True)
+    stream = (root / "caspr.log").open("w", encoding="utf-8", buffering=1)
+    sys.stdout = sys.stderr = stream
+    logging.basicConfig(stream=stream, level=logging.INFO,
+                        format="%(asctime)s %(name)s %(levelname)s %(message)s", force=True)
+    logging.getLogger("pywebview").setLevel(logging.DEBUG)
+
+
 def render_ui(webview, index, timeout=45):
-    """Open the real UI in WebView2 the way the app does; pass once its JS calls back into Python."""
+    """Open the app's real windows (overlay first, as the app does) with its exact options.
+
+    Passes only when each page's JS reaches the Python bridge.
+    """
     import threading
-    called = threading.Event()
+    from quick_tts_mic.web_app import window_options
 
     class Bridge:
+        def __init__(self, kind):
+            self.kind_name, self.called = kind, threading.Event()
+
         def kind(self):
-            return "settings"
+            return self.kind_name
 
         def state(self):
-            called.set()  # the page's module script ran and reached the Python bridge
+            self.called.set()  # the page's module script ran and reached the Python bridge
             raise RuntimeError("smoke test: no app state")
 
-    window = webview.create_window("Caspr TTS smoke", str(index), js_api=Bridge(), width=400, height=300)
-    threading.Thread(target=lambda: (called.wait(timeout), window.destroy()), daemon=True).start()
+    bridges = [Bridge("overlay"), Bridge("settings")]
+    windows = [webview.create_window(url=str(index), js_api=b, **window_options(b.kind_name)) for b in bridges]
+
+    def finish():
+        for b in bridges:
+            b.called.wait(timeout)
+        for window in windows:
+            window.destroy()
+
+    threading.Thread(target=finish, daemon=True).start()
     webview.start(http_server=True)
-    if not called.is_set():
-        raise RuntimeError("UI did not load in WebView2 (scripts blocked or bridge unavailable)")
+    missing = [b.kind_name for b in bridges if not b.called.is_set()]
+    if missing:
+        raise RuntimeError(f"UI did not load in WebView2 for: {', '.join(missing)}")
 
 
 def smoke(checkpoint):
@@ -94,6 +121,7 @@ def main(argv):
     try:
         if "--smoke-test" in argv:
             return smoke(checkpoint)
+        _log_to_file()
         from quick_tts_mic.web_app import main as app_main
         return app_main()
     except Exception as error:
