@@ -38,6 +38,12 @@ Stereo Mix records *everything* that output plays, so Discord also hears game,
 browser and system sounds from it. Caspr never switches to the system default if
 the selected device disappears; reconnect it or choose another output in Settings.
 
+**No Stereo Mix?** Many laptops don't have it. Install the free
+[VB-CABLE](https://vb-audio.com/Cable/) virtual cable (needs admin, usually a restart),
+set **Message output** to **CABLE Input (VB-Audio Virtual Cable)** and Discord's input
+to **CABLE Output (VB-Audio Virtual Cable)**. Discord then hears only Caspr. Settings
+picks up the new device when its window regains focus.
+
 To hear speech yourself, turn on **Hear speech in headphones** and choose a
 **Headphone output** that is a *different* device (for example USB or Bluetooth
 headphones). **Sample voice** only plays there, so samples never reach Stereo Mix;
