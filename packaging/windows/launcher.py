@@ -26,8 +26,13 @@ def _loaded_path(dll):
     import ctypes
     from ctypes import wintypes
     kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    kernel32.GetModuleHandleW.argtypes = [wintypes.LPCWSTR]
     kernel32.GetModuleHandleW.restype = wintypes.HMODULE
+    kernel32.GetModuleFileNameW.argtypes = [wintypes.HMODULE, wintypes.LPWSTR, wintypes.DWORD]
+    kernel32.GetModuleFileNameW.restype = wintypes.DWORD
     handle = kernel32.GetModuleHandleW(dll)
+    if not handle:
+        return ""
     buffer = ctypes.create_unicode_buffer(1024)
     kernel32.GetModuleFileNameW(handle, buffer, 1024)
     return buffer.value
