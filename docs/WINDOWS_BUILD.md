@@ -124,7 +124,7 @@ to run CI before merging; packaging work itself does not push, tag or publish.
 Only pushing an explicit `windows-v<version>` tag enables the separate `publish`
 job after successful build and installer validation. It uses the `windows-release`
 environment and a job-scoped contents-write token, checks the SHA-256 manifest,
-and creates a GitHub **prerelease** with all assets. Configure required reviewers
+and creates the GitHub release (marked **Latest**, notes from `docs/RELEASE_NOTES.md`) with all assets. Configure required reviewers
 on that environment and tag restrictions before enabling public releases. A
 manual dispatch, including one at a tag, does not publish. Re-running a job for an
 existing release fails instead of silently replacing published assets.

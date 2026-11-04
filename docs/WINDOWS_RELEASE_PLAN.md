@@ -64,7 +64,7 @@ Fixed along the way (each now covered by the CI smoke test where possible):
 ## Release
 
 Merge `feature/windows-webview` into `main`, then push a `windows-v0.1.0` tag: CI builds,
-runs the smoke and installer checks, and publishes an unsigned GitHub prerelease with
+runs the smoke and installer checks, and publishes an unsigned GitHub release (marked Latest) with
 SHA-256 checksums. Add required reviewers to the `windows-release` environment first.
 
 Remaining manual checks before calling it 1.0: Discord over Stereo Mix in a recorded call,

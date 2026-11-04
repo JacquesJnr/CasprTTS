@@ -116,12 +116,17 @@ jobs:
     permissions:
       contents: write
     steps:
+      # Only the release notes are needed from the repo; the assets come from the build job.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          sparse-checkout: docs/RELEASE_NOTES.md
+          sparse-checkout-cone-mode: false
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           pattern: windows-x64-*
           path: release
           merge-multiple: true
-      - name: Verify checksums and publish prerelease assets
+      - name: Verify checksums and publish release assets
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
@@ -129,4 +134,4 @@ jobs:
         run: |
           cd release
           sha256sum --check SHA256SUMS.txt
-          gh release create "$RELEASE_TAG" ./* --verify-tag --prerelease --title "Caspr TTS ${RELEASE_TAG#windows-v} for Windows" --notes "Windows x64 release candidate. Download the setup.exe installer; Python is bundled. See WINDOWS_BUILD.md in the directory bundle for setup and validation limits. This CI build is unsigned. Models and optional audio drivers are not bundled. Hardware audio routing and Microsoft James require target-PC validation."
+          gh release create "$RELEASE_TAG" ./* --verify-tag --latest --title "Caspr TTS ${RELEASE_TAG#windows-v} for Windows" --notes-file "$GITHUB_WORKSPACE/docs/RELEASE_NOTES.md"
