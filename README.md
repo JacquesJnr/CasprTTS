@@ -1,9 +1,9 @@
 ![CasprTTS](docs/Banner.png)
 
-A keyboard-first text-to-speech message box for Linux. Type a message, press
-Enter, and Caspr speaks it through a PipeWire virtual microphone that Discord
-(or any other app) can use as an input. By default you hear it in your
-headphones too.
+A keyboard-first text-to-speech message box for Linux and Windows. Type a message,
+press Enter, and Caspr speaks it into something Discord (or any other app) can use as
+an input: a PipeWire virtual microphone on Linux, or Stereo Mix on Windows. By
+default you hear it in your headphones too.
 
 ![Caspr message box with a highlighted /greeting command and quick option chips](docs/screenshots/overlay.png)
 
@@ -46,8 +46,8 @@ headphones too.
   line. Each shows its `/command`, and ▶ says a random phrase right away.
 - Settings save automatically as you change them, and voice changes stay in
   sync between Settings and the message box.
-- A **Microsoft voices** preference is saved for the upcoming Windows release
-  (see below).
+- On Windows: a Microsoft/Piper voice switch, message and headphone outputs, and
+  an editable global shortcut (see [Windows](#windows)).
 
 | Voices, audio and behavior | Quick options |
 | --- | --- |
@@ -56,7 +56,9 @@ headphones too.
 Caspr keeps running in the background after you close its windows, so the
 virtual microphone stays available until you choose **Quit**.
 
-## Requirements
+## Requirements (Linux)
+
+Windows users can skip to [Windows](#windows): the installer bundles everything.
 
 - Linux with PipeWire and its PulseAudio compatibility layer (`pactl`, `paplay`)
 - Python 3.11+
@@ -137,20 +139,56 @@ Install the test tools with `-r requirements-dev.txt` and run
 
 - Speech errors are shown in the app, not as desktop notifications.
 - Piper and voice model installation is manual.
-- The virtual microphone exists only while Caspr runs.
-- The shortcut is set up in your desktop's settings, not in Caspr.
+- Linux: the virtual microphone exists only while Caspr runs, and the shortcut is
+  set up in your desktop's settings, not in Caspr.
+- Windows: the installer is unsigned, and Stereo Mix sends everything on its output
+  to Discord.
 
-### Microsoft voice preference (Windows release preparation)
+## Windows
 
-Settings includes a separate Microsoft voices dropdown. On Windows, install the
-optional discovery support with `pip install '.[windows-voices]'`. It uses PyWinRT
-and Windows `SpeechSynthesizer.all_voices` to list only installed voices exposed
-by that API. Restart Caspr after changing installed voices to refresh the list.
+Caspr also runs on Windows 10/11 (x64) with the same interface, Microsoft voices
+(e.g. James, David, Zira) or Piper voices, and Discord input via **Stereo Mix**.
 
-The preference is saved independently of the Piper model. Missing saved voices
-are not replaced automatically. On Linux, or when discovery is unavailable, the
-dropdown is disabled and the saved preference is preserved.
+1. Download `Caspr-TTS-…-windows-x64-setup.exe` from
+   [Releases](https://github.com/JacquesJnr/CasprTTS/releases) and run it. The build is
+   **unsigned**, so Windows SmartScreen asks first: choose **More info → Run anyway**.
+   It installs for your user only (no admin) and installs Microsoft Edge WebView2 if
+   it is missing. Optionally tick **Start Caspr TTS when I sign in**.
+2. Enable **Stereo Mix** (Sound settings → More sound settings → Recording → show
+   disabled devices), set Caspr's **Message output** to the device it records, and
+   select **Stereo Mix** as Discord's input. Discord then hears everything on that
+   output.
+3. Press **Ctrl+Alt+T** (configurable) to open the message box; the tray icon has
+   Open message box, Settings and Quit.
 
-Microsoft playback is not available yet: messages and samples still use Piper,
-and audio routing is PipeWire-only. See
-[the Windows release plan](docs/WINDOWS_RELEASE_PLAN.md).
+Full details, troubleshooting and the log file location are in the
+[Windows user guide](docs/WINDOWS_USER_GUIDE.md); building the installer is covered
+in [WINDOWS_BUILD.md](docs/WINDOWS_BUILD.md).
+
+## License
+
+Caspr TTS is free software under the [GNU General Public License v3.0](LICENSE.md)
+(or later). It bundles Piper, which is GPL-3.0-or-later.
+
+## Credits
+
+- [Piper](https://github.com/OHF-Voice/piper1-gpl) (GPL-3.0-or-later) and its voice
+  models; keep each model's own license and attribution.
+- [Watermelon UI](https://ui.watermelon.sh) and [shadcn/ui](https://ui.shadcn.com)
+  components, [Motion](https://motion.dev), [lucide](https://lucide.dev) icons.
+- [Inter](https://rsms.me/inter/) and [IBM Plex Mono](https://github.com/IBM/plex)
+  fonts (SIL Open Font License 1.1).
+- Country flags on Windows from [Twemoji](https://github.com/jdecked/twemoji),
+  © Twitter, Inc and other contributors, licensed
+  [CC-BY 4.0](https://creativecommons.org/licenses/by/4.0/), via
+  [country-flag-emoji-polyfill](https://github.com/talkjs/country-flag-emoji-polyfill).
+- [pywebview](https://pywebview.flowrl.com/) (BSD-3-Clause),
+  [pystray](https://github.com/moses-palmer/pystray) (LGPL-3.0),
+  [PyWinRT](https://github.com/pywinrt/pywinrt) (MIT),
+  [python-sounddevice](https://github.com/spatialaudio/python-sounddevice) and
+  [PortAudio](https://www.portaudio.com/) (MIT), Microsoft Edge WebView2 and the Visual
+  C++ runtime (Microsoft redistributable terms).
+- Style based on Refero's "Linear" reference.
+
+Windows installers also contain a `third-party` folder with every bundled package's
+license notices.

@@ -136,7 +136,6 @@ def smoke(checkpoint):
     import piper
     from piper import PiperVoice  # noqa: F401  (the import that failed on a user PC)
     import sounddevice as sd
-    from scipy.signal import resample_poly
     checkpoint(stage="audio_and_piper_imported")
     import winrt.windows.foundation.collections  # noqa: F401
     import winrt.windows.media.speechsynthesis  # noqa: F401
@@ -155,7 +154,7 @@ def smoke(checkpoint):
         raise RuntimeError("Piper phonemizer returned no phonemes")
     if not DIST_INDEX.is_file():
         raise RuntimeError(f"Bundled UI missing: {DIST_INDEX}")
-    resample_poly(np.zeros((16, 2), dtype=np.float32), 2, 1)
+    np.zeros((16, 2), dtype=np.float32)
     tray_image()
     checkpoint(stage="render_begin")
     render_ui(webview, DIST_INDEX)

@@ -1,5 +1,9 @@
 # Caspr TTS on Windows
 
+The installer is **unsigned**: when SmartScreen warns, choose **More info → Run
+anyway**. Tick **Start Caspr TTS when I sign in** during setup to have it start in the
+notification area (no window) each time you sign in.
+
 Launch **Caspr TTS** from the Start menu after installing. Settings opens first.
 The installer also installs Microsoft Edge WebView2 for your account if Windows
 doesn't already have it (Windows 11 and updated Windows 10 usually do). The app
@@ -12,7 +16,9 @@ In **Voice**, pick **Microsoft voices** or **Piper voices**. The two remember th
 selections separately.
 
 - **Microsoft voices** lists the voices Windows exposes to apps (for example
-  James, Hazel, David, Zira), each with its flag and ♂/♀. A saved voice that is
+  James, Hazel, David, Zira), each with its flag and ♂/♀. To add one such as James,
+  install it in Windows Settings → Time & language → Speech → Manage voices, then
+  restart Caspr. A saved voice that is
   later removed stays saved but won't speak until you choose an available one.
 - **Piper voices**: use **Open voices folder**, add an `.onnx` file and its
   matching `.onnx.json`, then switch back to Settings; the list refreshes when the
@@ -45,6 +51,7 @@ shortcut** using Ctrl, Alt and/or Shift plus a letter, digit or F1–F24
 shortcut, a tray notification says so and the tray icon stays usable.
 
 - **Enter** speaks, then clears and hides the box. **Escape** clears and hides it.
+  Drag the box anywhere; it reopens in the same place.
 - **Up/Down** browse the last 25 typed messages from this session (memory only).
 - Quick option chips (**Alt+1**–**Alt+5**) and `/commands` say a random phrase
   from a category you set up in **Quick options**; typing `/` lists them.

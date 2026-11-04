@@ -8,6 +8,7 @@ import sys
 import tempfile
 import threading
 import traceback
+import webbrowser
 from dataclasses import asdict
 from multiprocessing.connection import Client, Listener
 from pathlib import Path
@@ -39,6 +40,16 @@ SETTABLE = {
 
 
 OVERLAY_WIDTH = 560
+OVERLAY_INITIAL_HEIGHT = 140  # Windows: the page then fits the window to its content
+CREDITS_URL = "https://github.com/JacquesJnr/CasprTTS#credits"
+
+
+def app_version() -> str:
+    from importlib.metadata import PackageNotFoundError, version
+    try:
+        return version("quick-tts-mic")
+    except PackageNotFoundError:
+        return "dev"
 
 
 def window_options(kind: str) -> dict:
@@ -47,7 +58,7 @@ def window_options(kind: str) -> dict:
         if WINDOWS:
             # pywebview can't make a WinForms window truly transparent, so the overlay is opaque
             # (card colour) and the page asks fit_overlay() to hug its content instead.
-            return dict(title="Caspr", width=OVERLAY_WIDTH, height=140, resizable=False,
+            return dict(title="Caspr", width=OVERLAY_WIDTH, height=OVERLAY_INITIAL_HEIGHT, resizable=False,
                         frameless=True, on_top=True, easy_drag=True, background_color="#0f1011")
         return dict(title="Caspr", width=OVERLAY_WIDTH, height=400, resizable=False, frameless=True,
                     transparent=True, on_top=True, easy_drag=True)
@@ -117,8 +128,14 @@ class CasprWeb:
                 self.windows[kind].run_js("document.querySelector('input')?.focus(); window.dispatchEvent(new Event('resize'))")
             return
         url = os.environ.get("CASPR_WEB_URL") or str(DIST_INDEX)
+        position = {}
+        if WINDOWS and kind == "overlay" and self.config.overlay_position:
+            from .windows_shell import on_a_screen
+            x, bottom = self.config.overlay_position
+            if on_a_screen(x, bottom - 1):
+                position = dict(x=x, y=bottom - OVERLAY_INITIAL_HEIGHT)
         window = webview.create_window(url=url, js_api=Api(self, kind), hidden=hidden,
-                                       **window_options(kind))
+                                       **window_options(kind), **position)
         window.events.closed += lambda: self.windows.pop(kind, None)
         if WINDOWS and kind == "overlay":
             from .windows_shell import round_corners
@@ -142,6 +159,18 @@ class CasprWeb:
             self.hotkey.change(value)
         self.broadcast("window.casprRefresh?.()")
 
+    def remember_overlay_position(self) -> None:
+        """Windows: keep the overlay where the user dragged it, across hides and launches."""
+        window = self.windows.get("overlay")
+        if not (WINDOWS and window and window.native is not None):
+            return
+        from .windows_shell import overlay_anchor
+        anchor = overlay_anchor(window)
+        if anchor != self.config.overlay_position:
+            with self._save_lock:
+                self.config.overlay_position = anchor
+                self.config.save()
+
     def notify(self, message: str) -> None:
         """Always-visible message: a tray balloon on Windows, the error channel elsewhere."""
         if self.tray:
@@ -150,6 +179,7 @@ class CasprWeb:
             self.error(message)
 
     def quit(self) -> None:
+        self.remember_overlay_position()
         if self.hotkey:
             self.hotkey.stop()
         if self.tray:
@@ -185,6 +215,7 @@ class CasprWeb:
                 "status": self.microsoft.selection_status(saved_ms),
             },
             "discordInput": self.speech.discord_input,
+            "version": app_version(),
         }
 
     def broadcast(self, js: str) -> None:
@@ -274,10 +305,15 @@ class Api:
         section, self._app.focus_section = self._app.focus_section, ""
         return section
 
+    def open_credits(self) -> None:
+        webbrowser.open(CREDITS_URL)
+
     def close(self) -> None:
         # Hide rather than destroy: the hidden overlay keeps the process (and virtual mic) alive.
         window = self._app.windows.get(self._kind)
         if window:
+            if self._kind == "overlay":
+                self._app.remember_overlay_position()
             window.hide()
 
     def quit(self) -> None:
@@ -305,7 +341,9 @@ def _serve_instance(app: CasprWeb) -> None:
 
 
 def main() -> int:
-    kind = "overlay" if "overlay" in sys.argv[1:] else "settings"
+    # "background" (Windows start-at-sign-in) starts with only the tray and the hidden overlay.
+    args = sys.argv[1:]
+    kind = "overlay" if "overlay" in args else "background" if "background" in args else "settings"
     if _forward_to_running(kind):
         return 0
     app = CasprWeb()

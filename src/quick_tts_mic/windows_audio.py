@@ -77,9 +77,12 @@ def destinations(config, devices, preview=False, verification=None):
     return result
 
 
-def decode_audio(data, rate, channels, volume):
+def decode_audio(data, channels, volume):
+    """PCM WAV → float32 frames at the WAV's own rate, plus 0.5 s silence to wake the output.
+    No resampling: WASAPI auto_convert adapts the rate to the device."""
     import numpy as np
     info = wav_info(data)
+    rate = info["sample_rate"]
     if info["channels"] not in (1, 2) or info["sample_width"] not in (1, 2, 3, 4):
         raise ProbeError("Unsupported speech WAV format; expected mono/stereo PCM.")
     if not math.isfinite(volume) or not 0 <= volume <= 1 or channels not in (1, 2) or not 8000 <= rate <= 192000:
@@ -100,10 +103,6 @@ def decode_audio(data, rate, channels, volume):
         samples = samples.mean(axis=1, keepdims=True)
     elif info["channels"] == 1:
         samples = np.repeat(samples, 2, axis=1)
-    if rate != info["sample_rate"]:  # playback passes the native rate; WASAPI resamples
-        from scipy.signal import resample_poly
-        divisor = math.gcd(rate, info["sample_rate"])
-        samples = resample_poly(samples, rate // divisor, info["sample_rate"] // divisor, axis=0)
     samples = np.clip(samples * volume, -1, 1).astype(np.float32)
     return np.concatenate((np.zeros((rate // 2, channels), dtype=np.float32), samples))
 
@@ -131,7 +130,7 @@ class WindowsRouter:
             # to any device format (e.g. 4-channel laptop speakers, 44.1 kHz, 24-bit).
             settings = sd.WasapiSettings(exclusive=False, auto_convert=True)
             rate = wav_info(data)["sample_rate"]  # e.g. 22050 for Piper; auto_convert resamples
-            buffers = [decode_audio(data, rate, min(2, device.channels), config.speech_volume / 100)
+            buffers = [decode_audio(data, min(2, device.channels), config.speech_volume / 100)
                        for device in selected]
             with ExitStack() as stack:
                 streams = [stack.enter_context(sd.OutputStream(

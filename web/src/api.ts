@@ -27,6 +27,7 @@ export type State = {
   microsoft: { voices: MicrosoftVoice[]; status: string }
   discordInput: string
   errors: string[] // parts of the state Python could not read
+  version: string
 }
 export type Api = {
   kind: () => Promise<"overlay" | "settings">
@@ -42,6 +43,7 @@ export type Api = {
   take_focus_section: () => Promise<string>
   open_voices_folder: () => Promise<void>
   fit_overlay: (height: number) => Promise<void>
+  open_credits: () => Promise<void>
   close: () => Promise<void>
   quit: () => Promise<void>
 }

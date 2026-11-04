@@ -41,7 +41,7 @@ class WindowsConfig(AppConfig):
     speech_provider: str = "piper"
     message_endpoint_id: str = ""
     preview_endpoint_id: str = ""
-    output_rate: int = 48000
+    overlay_position: list = field(default_factory=list)  # [x, bottom] in logical px, Windows only
     hotkey: str = "Ctrl+Alt+T"
     _extra: dict = field(default_factory=dict, repr=False)
 
@@ -69,6 +69,11 @@ class WindowsConfig(AppConfig):
             if key == "quick_options":
                 clean[key] = normalize_quick_options(value)
                 continue
+            if key == "overlay_position":
+                ok = (isinstance(value, list) and len(value) == 2 and
+                      all(isinstance(v, (int, float)) and not isinstance(v, bool) and math.isfinite(v) for v in value))
+                clean[key] = [int(v) for v in value] if ok else []
+                continue
             if isinstance(expected, bool):
                 valid = isinstance(value, bool)
             elif isinstance(expected, (int, float)):
@@ -83,8 +88,6 @@ class WindowsConfig(AppConfig):
         result.history_limit = 25
         if result.speech_provider not in ("piper", "microsoft"):
             result.speech_provider = "piper"
-        if result.output_rate not in (44100, 48000):
-            result.output_rate = 48000
         result._extra = {k: v for k, v in values.items() if k not in fields}
         if migrate:
             result.save(destination)

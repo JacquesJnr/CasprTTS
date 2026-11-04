@@ -272,8 +272,7 @@ def main(argv=None):
             from .windows_audio import WindowsRouter
             from .windows_runtime import WindowsConfig
             import threading
-            config = WindowsConfig(message_endpoint_id=args.endpoint_id,
-                                   output_rate=args.rate, speech_volume=args.volume * 100)
+            config = WindowsConfig(message_endpoint_id=args.endpoint_id, speech_volume=args.volume * 100)
             WindowsRouter().play(args.wav.read_bytes(), config, False, None, threading.Event())
             result = dict(endpoint_id=args.endpoint_id, sample_rate=args.rate,
                           volume=args.volume, hardware_isolation_verified=False)

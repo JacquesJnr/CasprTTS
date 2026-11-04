@@ -1,7 +1,7 @@
 # Caspr TTS Windows release plan
 
-Updated 2026-11-03. Branch: `feature/windows-webview`. Target: a friend's Windows 10
-x64 PC. Nothing here has run on Windows yet; Linux tests are not Windows validation.
+Updated 2026-11-04. Branch: `feature/windows-webview`. Target: a friend's Windows 10
+x64 PC; tested on a Windows 11 x64 PC (see Status).
 
 ## Stack
 
@@ -14,7 +14,7 @@ platform:
 | --- | --- | --- |
 | Config | `AppConfig` (`~/.config/quick-tts-mic`) | `WindowsConfig` (`%LOCALAPPDATA%\Caspr TTS`, migrates the Linux-style file) |
 | Speech | `SpeechQueue`: Piper | `WindowsSpeechQueue`: Piper or Microsoft (WinRT) |
-| Output | PipeWire virtual mic `quick_tts_mic` | WASAPI to an exact device ID; Discord records **Stereo Mix** |
+| Output | PipeWire virtual mic `quick_tts_mic` | PortAudio WASAPI (shared, `auto_convert`) to an exact device name; Discord records **Stereo Mix** |
 | Shortcut | Desktop/WM binding → `scripts/quick-tts-overlay` | `RegisterHotKey` thread (`windows_shell.py`), default Ctrl+Alt+T |
 | Background | Hidden overlay keeps the process alive | Same, plus a **pystray** tray icon |
 | Single instance | Unix socket | Named pipe (same `multiprocessing.connection` code) |
@@ -30,46 +30,43 @@ PyInstaller/Inno packaging and CI were brought over.
    everything else on that output. VB-CABLE stays possible but is not the default.
 2. **Default voice: Microsoft James** when Windows exposes it; Piper optional.
 3. **Tray icon via pystray** (Open message box / Settings / Quit).
-4. **First release unsigned.** SmartScreen → *More info → Run anyway* is acceptable.
+4. **Releases stay unsigned** (decided 2026-11-04: not worth a certificate for one user).
+   SmartScreen → *More info → Run anyway*. `build.ps1` can still sign with a certificate
+   thumbprint if that changes.
+5. **License: GPL-3.0-or-later** (`LICENSE.md`), required by the bundled Piper engine.
 
 Samples ("Sample voice") play only on a headphone output that differs from the
 message output, so they never reach Stereo Mix. This replaces the old per-session
 "verify preview isolation" checkbox.
 
-## Done on this branch
+## Status (2026-11-04)
 
-- Windows backend merged under the new UI; Windows Settings shows a Microsoft/Piper
-  switch (Microsoft voices with flag + ♂/♀), message and headphone output pickers,
-  an editable hotkey and **Open voices folder**. Linux Settings is unchanged.
-- Overlay voice switcher lists Microsoft voices when that provider is selected.
-- Flag emoji render on Windows via a bundled Twemoji country-flag font (no CDN).
-- Global hotkey, tray, frozen-path handling (`sys._MEIPASS/web/dist`).
-- Packaging: spec/launcher for pywebview, smoke test covering every native piece,
-  installer runs Microsoft's (signature-checked) WebView2 bootstrapper when missing,
-  CI builds the UI with Node 22, regenerated hash-locked Windows dependencies.
+Tested on the target Windows 11 PC with build `dev.16`: Settings and the overlay render,
+outputs list the Realtek device, Microsoft voices (including James, installed via Windows
+speech settings and exposed through WinRT) and Piper voices both speak, and only Settings
+appears at launch.
 
-## Next steps and exit gates
+Fixed along the way (each now covered by the CI smoke test where possible):
+- PyInstaller's `pkg_resources` hook crashed before startup (setuptools 80); excluded.
+- WebView2 blocks ES modules on `file://`; the UI is served from pywebview's localhost server.
+- Each UI data source is read separately so one failure can't blank a window.
+- Playback moved from SoundCard to sounddevice/PortAudio WASAPI with `auto_convert`
+  (SoundCard failed with E_INVALIDARG on the Realtek SST speakers; it can't ask Windows to
+  convert formats, likely a channel-count mismatch); SciPy is no longer
+  bundled because Windows resamples.
+- The Visual C++ runtime is bundled and preloaded so onnxruntime (Piper) loads on PCs
+  without a current system copy.
+- The overlay is opaque on Windows (pywebview can't make WinForms windows transparent),
+  fits its content, grows upward for menus, stays hidden at launch, remembers its
+  position, and Windows 11 rounds its corners.
+- First-message latency: warm-up at launch and one reused SpeechSynthesizer.
 
-| Step | Work | Exit gate |
-| --- | --- | --- |
-| 1. CI build | Push the branch; fix whatever the first `windows-2022` run finds | Tests, frozen smoke, installer install/upgrade/uninstall all green; installer artifact produced |
-| 2. Probe on the target PC | Run `CasprTTS.exe --probe` and `scripts/windows-sapi-probe.ps1` from the artifact | Know whether James is exposed via WinRT (needed) or only SAPI; Realtek endpoint ID and Stereo Mix confirmed; WebView2 present or installed |
-| 3. App on the target PC | Install, pick James + Realtek, Discord input = Stereo Mix | Overlay transparent/on top and focused by Ctrl+Alt+T; tray works; speech audible in a recorded Discord call; samples absent from that recording |
-| 4. Acceptance | Checklist below | All items pass, then tag `windows-v0.1.0` to publish an unsigned prerelease |
+## Release
 
-Acceptance checklist: first install (with and without WebView2), James present and
-absent, Piper model added later, monitoring on/off, 0/100% volume, rapid sends and a
-synthesis failure, Realtek unplug/replug, duplicate device names, sleep/resume,
-default-output change, hotkey conflict, second launch, 100/150/200% scaling,
-non-ASCII user name/path, upgrade and uninstall.
+Merge `feature/windows-webview` into `main`, then push a `windows-v0.1.0` tag: CI builds,
+runs the smoke and installer checks, and publishes an unsigned GitHub prerelease with
+SHA-256 checksums. Add required reviewers to the `windows-release` environment first.
 
-## Open risks
-
-- **James via WinRT.** If James is only a SAPI voice, the WinRT provider can't use it;
-  options are a SAPI adapter or a different Microsoft voice.
-- **Transparent frameless overlay on WebView2** is untested; fallback is an opaque
-  rounded window.
-- **First-build packaging** (pythonnet/WebView2 collection, proxy_tools source build)
-  is unverified until CI runs.
-- **Licensing review** before a public release: Piper (GPL-3.0-or-later), pystray
-  (LGPL-3.0), WebView2 SDK DLLs, Twemoji flags (CC-BY 4.0), bundled npm packages.
+Remaining manual checks before calling it 1.0: Discord over Stereo Mix in a recorded call,
+hotkey conflict, Realtek unplug/replug, sleep/resume, 150/200% scaling, a non-ASCII
+Windows user name, and upgrade/uninstall on the PC.

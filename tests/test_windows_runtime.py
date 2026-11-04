@@ -52,11 +52,11 @@ def test_config_invalid_root(content, tmp_path):
 def test_config_sanitizes_types_and_bounds(tmp_path):
     path = tmp_path / 'config.json'
     path.write_text(json.dumps(dict(local_monitor='false', speech_volume=500,
-        output_rate=123, playback_delay_seconds=float('nan'), microsoft_voice_id=23)))
+        overlay_position=[10, 'x'], playback_delay_seconds=float('nan'), microsoft_voice_id=23)))
     config = WindowsConfig.load(path)
     assert not config.local_monitor
     assert config.speech_volume == 100
-    assert config.output_rate == 48000
+    assert config.overlay_position == []
     assert config.playback_delay_seconds == 0.5
     assert config.microsoft_voice_id == ''
 
@@ -218,3 +218,9 @@ def test_failed_warm_up_does_not_stop_the_queue():
     worker.submit('hello', config, on_complete=done.set)
     assert done.wait(5) and warmed.is_set() and len(played) == 1
     worker.stop()
+
+
+def test_overlay_position_round_trips(tmp_path):
+    path = tmp_path / 'config.json'
+    WindowsConfig(overlay_position=[120, 900]).save(path)
+    assert WindowsConfig.load(path).overlay_position == [120, 900]

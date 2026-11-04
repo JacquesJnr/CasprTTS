@@ -42,6 +42,8 @@ SignedUninstaller=yes
 ; Remove obsolete bundled libraries on upgrade, never the separate user data.
 Type: filesandordirs; Name: "{app}\_internal"
 Type: filesandordirs; Name: "{app}\third-party"
+[Tasks]
+Name: "startup"; Description: "Start Caspr TTS when I sign in (runs in the notification area)"; Flags: unchecked
 [Files]
 Source: "{#BundleDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 #ifdef WebView2Bootstrapper
@@ -50,6 +52,7 @@ Source: "{#WebView2Bootstrapper}"; DestDir: "{tmp}"; Flags: deleteafterinstall
 [Icons]
 Name: "{group}\Caspr TTS"; Filename: "{app}\CasprTTS.exe"
 Name: "{group}\Uninstall Caspr TTS"; Filename: "{uninstallexe}"
+Name: "{userstartup}\Caspr TTS"; Filename: "{app}\CasprTTS.exe"; Parameters: "background"; Tasks: startup
 [Run]
 #ifdef WebView2Bootstrapper
 ; The UI renders in Microsoft Edge WebView2 (preinstalled on Windows 11 and updated Windows 10).

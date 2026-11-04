@@ -6,7 +6,6 @@ import wave
 
 import pytest
 np = pytest.importorskip('numpy')
-pytest.importorskip('scipy')
 from quick_tts_mic import windows_audio as audio
 from quick_tts_mic.windows_runtime import WindowsConfig
 from quick_tts_mic.windows_probe import ProbeError
@@ -22,19 +21,20 @@ def wav_data(rate=22050, channels=1, width=2):
     return output.getvalue()
 
 
-@pytest.mark.parametrize('rate', [44100, 48000])
+@pytest.mark.parametrize('rate', [22050, 44100])
 @pytest.mark.parametrize('width', [1, 2, 3, 4])
-def test_resampling_pcm_formats_and_silence(rate, width):
-    result = audio.decode_audio(wav_data(width=width), rate, 2, .5)
+def test_pcm_formats_native_rate_and_silence(rate, width):
+    result = audio.decode_audio(wav_data(rate=rate, width=width), 2, .5)
     assert result.dtype == np.float32 and result.shape[1] == 2
+    assert len(result) == rate // 2 + 300  # 0.5 s lead-in + the 300 source frames, not resampled
     assert np.all(result[:rate // 2] == 0)
     assert np.array_equal(result[:, 0], result[:, 1])
     assert .1 < np.max(np.abs(result)) <= 1
-    assert np.all(audio.decode_audio(wav_data(width=width), rate, 1, 0) == 0)
+    assert np.all(audio.decode_audio(wav_data(rate=rate, width=width), 1, 0) == 0)
 
 
 def test_stereo_to_mono():
-    data = audio.decode_audio(wav_data(channels=2), 48000, 1, 1)
+    data = audio.decode_audio(wav_data(channels=2), 1, 1)
     assert data.shape[1] == 1
 
 

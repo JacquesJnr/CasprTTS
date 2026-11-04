@@ -105,3 +105,18 @@ def resize_bottom_anchored(window, width: int, height: int) -> None:
     x, y = form.Location.X, form.Location.Y + form.Height - h
     SWP_NOZORDER, SWP_NOACTIVATE = 0x0004, 0x0010
     ctypes.windll.user32.SetWindowPos(form.Handle.ToInt32(), None, x, y, w, h, SWP_NOZORDER | SWP_NOACTIVATE)
+
+
+def overlay_anchor(window) -> list[int]:
+    """[x, bottom] of the overlay in logical px; the bottom stays put while it resizes."""
+    form = window.native
+    scale = getattr(form, "_scale", 1) or 1
+    return [round(form.Location.X / scale), round((form.Location.Y + form.Height) / scale)]
+
+
+def on_a_screen(x: int, y: int) -> bool:
+    """False when the saved spot is on a monitor that is gone, so the overlay re-centres."""
+    import webview
+    # ponytail: mixes logical coordinates with pywebview's screen bounds; fine for single-DPI
+    # setups, refine with per-monitor DPI if a saved position lands off-screen in practice.
+    return any(s.x <= x < s.x + s.width and s.y <= y <= s.y + s.height for s in webview.screens)

@@ -21,7 +21,7 @@ for distribution in (
     "winrt-Windows.Media.SpeechSynthesis", "winrt-Windows.Storage.Streams",
     "winrt-Windows.Foundation", "winrt-Windows.Foundation.Collections",
     "winrt-Windows.Devices.Enumeration", "winrt-Windows.Media.Devices",
-    "pywebview", "pythonnet", "clr_loader", "pystray", "pillow",
+    "pywebview", "pythonnet", "clr_loader", "pystray", "pillow", "quick-tts-mic",
 ):
     datas += copy_metadata(distribution)
 # App-local Visual C++ runtime: onnxruntime (Piper) needs a current msvcp140/vcruntime140_1.
@@ -50,7 +50,7 @@ a = Analysis(
     # Build/test-only modules reached via pytest, onnxruntime.transformers and cffi's build shim.
     # Bundling pkg_resources adds a startup hook that crashes on setuptools 80 (missing backports).
     excludes=["gi", "tkinter", "PyQt5", "PyQt6", "PySide6",
-              "pkg_resources", "setuptools", "pytest", "_pytest", "onnxruntime.transformers"],
+              "pkg_resources", "setuptools", "pytest", "_pytest", "onnxruntime.transformers", "scipy"],
     noarchive=False,
 )
 # The upstream sounddevice hook also gathers ASIO; filter the final TOC.

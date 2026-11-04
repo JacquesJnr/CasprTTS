@@ -439,6 +439,12 @@ export function Settings({ api }: { api: Api }) {
 
       <footer className="flex justify-between border-t border-border bg-card px-4 py-3">
         <button className={`${button} text-muted-foreground hover:bg-accent hover:text-destructive`} onClick={() => api.quit()}>Quit</button>
+        <span className="flex items-center gap-1.5 self-center font-mono text-[11px] text-fog">
+          v{state.version} · GPL-3.0 ·
+          <button className="underline-offset-2 outline-none hover:text-steel hover:underline focus-visible:text-primary" onClick={() => api.open_credits()}>
+            Credits
+          </button>
+        </span>
         <button className={primary} onClick={() => api.open_overlay()}>Open message box</button>
       </footer>
     </div>
