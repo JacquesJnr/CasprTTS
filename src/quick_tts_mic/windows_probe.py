@@ -88,12 +88,14 @@ def winrt_voices():
             for v in SpeechSynthesizer.all_voices]
 
 
-async def winrt_synthesize(voice_id, text=PHRASE):
+async def winrt_synthesize(voice_id, text=PHRASE, synth=None):
+    """Synthesize to WAV bytes; pass a long-lived `synth` to reuse it (the app does)."""
     from winrt.windows.media.speechsynthesis import SpeechSynthesizer
     from winrt.windows.storage.streams import DataReader
     voices = list(SpeechSynthesizer.all_voices)
     selected = exact_match([dict(id=v.id, voice=v) for v in voices], "id", voice_id)
-    synth = SpeechSynthesizer()
+    owned = synth is None
+    synth = SpeechSynthesizer() if owned else synth
     try:
         synth.voice = selected["voice"]
         stream = await synth.synthesize_text_to_stream_async(text)
@@ -115,7 +117,8 @@ async def winrt_synthesize(voice_id, text=PHRASE):
         finally:
             stream.close()
     finally:
-        synth.close()
+        if owned:
+            synth.close()
 
 
 async def windows_endpoints():

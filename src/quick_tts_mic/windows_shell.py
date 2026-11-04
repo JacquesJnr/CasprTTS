@@ -93,3 +93,15 @@ def round_corners(window) -> None:
         ctypes.windll.dwmapi.DwmSetWindowAttribute(hwnd, 33, ctypes.byref(preference), ctypes.sizeof(preference))
     except Exception:
         pass  # purely cosmetic
+
+
+def resize_bottom_anchored(window, width: int, height: int) -> None:
+    """Resize keeping the bottom edge, WITHOUT showing the window: pywebview's resize() passes
+    SWP_SHOWWINDOW, which made the hidden overlay appear at launch."""
+    import ctypes
+    form = window.native
+    scale = getattr(form, "_scale", 1) or 1
+    w, h = int(width * scale), int(height * scale)
+    x, y = form.Location.X, form.Location.Y + form.Height - h
+    SWP_NOZORDER, SWP_NOACTIVATE = 0x0004, 0x0010
+    ctypes.windll.user32.SetWindowPos(form.Handle.ToInt32(), None, x, y, w, h, SWP_NOZORDER | SWP_NOACTIVATE)

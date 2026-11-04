@@ -158,10 +158,22 @@ class SpeechEngine:
     def __init__(self):
         self._model_path = None
         self._voice = None
+        self._synth = None  # one WinRT SpeechSynthesizer, reused for every message
+
+    def warm(self, config):
+        """Pay one-time costs at launch (PortAudio start, WinRT voice activation, Piper model
+        load) instead of on the first message. Uses a fixed word and plays nothing."""
+        import numpy  # noqa: F401  (decode_audio)
+        from .windows_audio import _wasapi_outputs, sounddevice
+        _wasapi_outputs(sounddevice())
+        self.synthesize("Ready", config)
 
     def synthesize(self, text, config):
         if config.speech_provider == "microsoft":
-            return asyncio.run(winrt_synthesize(config.microsoft_voice_id, text))
+            if self._synth is None:
+                from winrt.windows.media.speechsynthesis import SpeechSynthesizer
+                self._synth = SpeechSynthesizer()
+            return asyncio.run(winrt_synthesize(config.microsoft_voice_id, text, self._synth))
         if config.speech_provider != "piper":
             raise ProbeError("Select a supported speech provider.")
         model = Path(config.model_path).expanduser()
@@ -188,7 +200,8 @@ class Request:
 
 
 class WindowsSpeechQueue:
-    def __init__(self, error_callback, status_callback=lambda _: None, engine=None, router=None):
+    def __init__(self, error_callback, status_callback=lambda _: None, engine=None, router=None,
+                 warm_config=None):
         if router is None:
             from .windows_audio import WindowsRouter
             router = WindowsRouter()
@@ -198,6 +211,7 @@ class WindowsSpeechQueue:
         self.status_callback = status_callback
         self.pending = queue.Queue()
         self.cancelled = threading.Event()
+        self.warm_config = warm_config
         self.thread = threading.Thread(target=self._work, daemon=True, name="Caspr speech")
         self.thread.start()
 
@@ -215,6 +229,11 @@ class WindowsSpeechQueue:
     def _work(self):
         try:
             with com_apartment():
+                if self.warm_config is not None:
+                    try:
+                        self.engine.warm(self.warm_config)
+                    except Exception:
+                        traceback.print_exc()  # warm-up is best effort; real errors surface per message
                 self._consume()
         except Exception:
             self.error_callback("Windows speech worker could not start. Restart Caspr TTS.")
@@ -270,7 +289,8 @@ class WindowsBackend:
         self._config = config_provider
         # ponytail: a preview is "verified" when its output differs from the message output
         # (Stereo Mix only captures the message device); add an explicit check if leaks show up.
-        self.queue = WindowsSpeechQueue(error_callback, router=WindowsRouter(lambda token: token is not None))
+        self.queue = WindowsSpeechQueue(error_callback, router=WindowsRouter(lambda token: token is not None),
+                                        warm_config=config_provider())
 
     def prepare(self):
         pass  # Stereo Mix is a Windows device; nothing to create.
@@ -282,7 +302,8 @@ class WindowsBackend:
         from .windows_audio import endpoints, topology
         config = self._config()
         with com_apartment():
-            verification = (config.message_endpoint_id, config.preview_endpoint_id, topology(endpoints()))
+            verification = (config.message_endpoint_id, config.preview_endpoint_id,
+                            topology(endpoints(refresh=False)))
         self.queue.submit(SAMPLE_PHRASE, config, preview=True,
                           preview_verification=verification, on_complete=on_complete)
 

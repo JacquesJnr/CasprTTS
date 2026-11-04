@@ -41,11 +41,14 @@ def _wasapi_outputs(sd):
             if d["hostapi"] == host and d["max_output_channels"] > 0]
 
 
-def endpoints():
+def endpoints(refresh=True):
+    """WASAPI outputs. `refresh` re-initialises PortAudio to notice newly plugged-in devices
+    (Settings listing); per-message checks skip it because it is slow."""
     sd = sounddevice()
     with _PORTAUDIO:
-        sd._terminate()  # documented way to make PortAudio notice newly plugged-in devices
-        sd._initialize()
+        if refresh:
+            sd._terminate()
+            sd._initialize()
         return [endpoint for endpoint, _ in _wasapi_outputs(sd)]
 
 
@@ -76,11 +79,10 @@ def destinations(config, devices, preview=False, verification=None):
 
 def decode_audio(data, rate, channels, volume):
     import numpy as np
-    from scipy.signal import resample_poly
     info = wav_info(data)
     if info["channels"] not in (1, 2) or info["sample_width"] not in (1, 2, 3, 4):
         raise ProbeError("Unsupported speech WAV format; expected mono/stereo PCM.")
-    if not math.isfinite(volume) or not 0 <= volume <= 1 or channels not in (1, 2) or rate not in (44100, 48000):
+    if not math.isfinite(volume) or not 0 <= volume <= 1 or channels not in (1, 2) or not 8000 <= rate <= 192000:
         raise ProbeError("Invalid output format or volume.")
     with wave.open(io.BytesIO(data), "rb") as wav:
         raw = wav.readframes(info["frames"])
@@ -98,7 +100,8 @@ def decode_audio(data, rate, channels, volume):
         samples = samples.mean(axis=1, keepdims=True)
     elif info["channels"] == 1:
         samples = np.repeat(samples, 2, axis=1)
-    if rate != info["sample_rate"]:
+    if rate != info["sample_rate"]:  # playback passes the native rate; WASAPI resamples
+        from scipy.signal import resample_poly
         divisor = math.gcd(rate, info["sample_rate"])
         samples = resample_poly(samples, rate // divisor, info["sample_rate"] // divisor, axis=0)
     samples = np.clip(samples * volume, -1, 1).astype(np.float32)
@@ -115,7 +118,7 @@ class WindowsRouter:
 
     def validate(self, config, preview=False, verification=None):
         self.authorize(preview, verification)
-        return destinations(config, endpoints(), preview, verification)
+        return destinations(config, endpoints(refresh=False), preview, verification)
 
     def play(self, data, config, preview, verification, cancelled):
         self.authorize(preview, verification)
@@ -127,11 +130,12 @@ class WindowsRouter:
             # Speech is mono/stereo; auto_convert lets Windows' channel mixer and resampler fit it
             # to any device format (e.g. 4-channel laptop speakers, 44.1 kHz, 24-bit).
             settings = sd.WasapiSettings(exclusive=False, auto_convert=True)
-            buffers = [decode_audio(data, config.output_rate, min(2, device.channels), config.speech_volume / 100)
+            rate = wav_info(data)["sample_rate"]  # e.g. 22050 for Piper; auto_convert resamples
+            buffers = [decode_audio(data, rate, min(2, device.channels), config.speech_volume / 100)
                        for device in selected]
             with ExitStack() as stack:
                 streams = [stack.enter_context(sd.OutputStream(
-                    device=index[device.id], samplerate=config.output_rate, channels=buffer.shape[1],
+                    device=index[device.id], samplerate=rate, channels=buffer.shape[1],
                     dtype="float32", extra_settings=settings)) for device, buffer in zip(selected, buffers)]
                 # Every stream is open before any speech. Never retry another destination.
                 for start in range(0, len(buffers[0]), 1024):

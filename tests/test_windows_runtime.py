@@ -195,3 +195,26 @@ def test_config_keeps_quick_options(tmp_path):
     path = tmp_path / 'config.json'
     path.write_text(json.dumps({'quick_options': [{'name': ' BRB ', 'phrases': ['Be right back', 3]}]}))
     assert WindowsConfig.load(path).quick_options == [{'name': 'BRB', 'phrases': ['Be right back']}]
+
+
+def test_failed_warm_up_does_not_stop_the_queue():
+    played, warmed = [], threading.Event()
+
+    class Engine:
+        def warm(self, config):
+            warmed.set()
+            raise RuntimeError('no voice yet')
+
+        def synthesize(self, text, config):
+            return wav_bytes()
+
+    class Router:
+        def validate(self, *args): pass
+        def play(self, data, *args): played.append(data)
+
+    done = threading.Event()
+    config = WindowsConfig(playback_delay_seconds=0)
+    worker = WindowsSpeechQueue(lambda message: None, engine=Engine(), router=Router(), warm_config=config)
+    worker.submit('hello', config, on_complete=done.set)
+    assert done.wait(5) and warmed.is_set() and len(played) == 1
+    worker.stop()

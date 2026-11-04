@@ -81,6 +81,8 @@ def test_router_plays_exact_wasapi_devices_with_auto_convert(monkeypatch):
     # Index 1 (WASAPI 'message'), not the MME device of the same name; stereo even on 4 channels.
     assert [(o['device'], o['channels']) for o in fake.opened] == [(1, 2), (2, 2)]
     assert all(o['extra_settings'] == {'exclusive': False, 'auto_convert': True} for o in fake.opened)
+    # Native speech rate (22050 Hz); WASAPI resamples, so no SciPy on the playback path.
+    assert all(o['samplerate'] == 22050 for o in fake.opened)
     fake.opened.clear()
     config.message_endpoint_id = 'missing'
     with pytest.raises(ProbeError): audio.WindowsRouter().play(wav_data(), config, False, None, threading.Event())

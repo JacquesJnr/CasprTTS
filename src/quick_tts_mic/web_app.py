@@ -113,7 +113,8 @@ class CasprWeb:
             window.show()
             if kind == "overlay":
                 self.history.reset_navigation()
-                self.windows[kind].run_js("document.querySelector('input')?.focus()")
+                # Re-fit once visible (hidden windows may not have reported their size yet).
+                self.windows[kind].run_js("document.querySelector('input')?.focus(); window.dispatchEvent(new Event('resize'))")
             return
         url = os.environ.get("CASPR_WEB_URL") or str(DIST_INDEX)
         window = webview.create_window(url=url, js_api=Api(self, kind), hidden=hidden,
@@ -259,9 +260,9 @@ class Api:
     def fit_overlay(self, height: float) -> None:
         """Windows: resize the opaque overlay to its content, keeping the bottom edge fixed."""
         window = self._app.windows.get("overlay")
-        if WINDOWS and window and self._kind == "overlay":
-            from webview.window import FixPoint
-            window.resize(OVERLAY_WIDTH, max(100, min(520, round(height))), fix_point=FixPoint.SOUTH)
+        if WINDOWS and window and self._kind == "overlay" and window.native is not None:
+            from .windows_shell import resize_bottom_anchored
+            resize_bottom_anchored(window, OVERLAY_WIDTH, max(100, min(520, round(height))))
 
     def open_voices_folder(self) -> None:
         """Windows: Piper models live in %LOCALAPPDATA%\\Caspr TTS\\data\\voices; open it in Explorer."""
