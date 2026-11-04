@@ -24,6 +24,16 @@ for distribution in (
     "pywebview", "pythonnet", "clr_loader", "pystray", "pillow",
 ):
     datas += copy_metadata(distribution)
+# App-local Visual C++ runtime: onnxruntime (Piper) needs a current msvcp140/vcruntime140_1.
+# Users' PCs may lack it or have an older copy (onnxruntime #25193/#21024); launcher.py
+# preloads these by full path before any native import.
+import os
+VC_RUNTIME = ("vcruntime140.dll", "vcruntime140_1.dll", "msvcp140.dll", "msvcp140_1.dll", "msvcp140_2.dll")
+system32 = Path(os.environ["SystemRoot"]) / "System32"
+for dll in VC_RUNTIME:
+    if not (system32 / dll).is_file():
+        raise SystemExit(f"Visual C++ runtime missing on build machine: {dll}")
+    binaries.append((str(system32 / dll), "."))
 # The React UI, built by `npm --prefix web run build`; web_app loads it from sys._MEIPASS/web/dist.
 dist = root / "web" / "dist"
 if not (dist / "index.html").is_file():

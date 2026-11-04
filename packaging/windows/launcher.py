@@ -6,6 +6,36 @@ from pathlib import Path
 import sys
 
 
+VC_RUNTIME = ("vcruntime140.dll", "vcruntime140_1.dll", "msvcp140.dll", "msvcp140_1.dll", "msvcp140_2.dll")
+
+
+def _preload_vc_runtime():
+    """Load the bundled Visual C++ runtime by full path before any native module, so Windows reuses
+    it for onnxruntime/WinRT instead of a missing or older system copy."""
+    root = getattr(sys, "_MEIPASS", None)
+    if sys.platform != "win32" or not root:
+        return
+    import ctypes
+    for dll in VC_RUNTIME:
+        path = os.path.join(root, dll)
+        if os.path.isfile(path):
+            ctypes.WinDLL(path)
+
+
+def _loaded_path(dll):
+    import ctypes
+    from ctypes import wintypes
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    kernel32.GetModuleHandleW.restype = wintypes.HMODULE
+    handle = kernel32.GetModuleHandleW(dll)
+    buffer = ctypes.create_unicode_buffer(1024)
+    kernel32.GetModuleFileNameW(handle, buffer, 1024)
+    return buffer.value
+
+
+_preload_vc_runtime()
+
+
 def _report_writer(argv):
     """Smoke runs write a checkpoint after every stage so a windowed process can't hide where it died."""
     if "--smoke-report" not in argv:
@@ -73,7 +103,10 @@ def render_ui(webview, index, timeout=45):
 
 def smoke(checkpoint):
     """Load every native piece and render the UI once in WebView2; no audio, hardware or network."""
-    checkpoint(stage="backend_begin")
+    msvcp = _loaded_path("msvcp140.dll")
+    if not msvcp.lower().startswith(sys._MEIPASS.lower()):
+        raise RuntimeError(f"Bundled Visual C++ runtime not in use: {msvcp}")
+    checkpoint(stage="backend_begin", msvcp140=msvcp)
     # Same path as Settings: list WASAPI outputs through the backend from a bridge thread.
     import threading
     from quick_tts_mic.windows_runtime import WindowsBackend, WindowsConfig
@@ -96,6 +129,7 @@ def smoke(checkpoint):
     import numpy as np
     import onnxruntime
     import piper
+    from piper import PiperVoice  # noqa: F401  (the import that failed on a user PC)
     import sounddevice as sd
     from scipy.signal import resample_poly
     checkpoint(stage="audio_and_piper_imported")

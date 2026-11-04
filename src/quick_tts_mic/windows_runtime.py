@@ -264,9 +264,10 @@ class WindowsSpeechQueue:
                 else:
                     # Messages may contain the spoken text, which never leaves memory; the stage,
                     # type and stack frames (to caspr.log) are enough to locate the failure.
-                    # Playback errors only describe audio devices (PortAudio/WASAPI errors),
-                    # so their message is shown; synthesis messages are not.
-                    detail = f"{type(error).__name__}: {error}" if stage == "playback" else type(error).__name__
+                    # Playback, import and DLL errors only describe devices or files, so their message
+                    # is shown; other synthesis messages may contain the spoken text and are not.
+                    describes_files = stage == "playback" or isinstance(error, (ImportError, OSError))
+                    detail = f"{type(error).__name__}: {error}" if describes_files else type(error).__name__
                     print(f"{stage} failed: {detail}\n" + "".join(traceback.format_tb(error.__traceback__)),
                           file=sys.stderr)
                     self.error_callback(f"{stage.capitalize()} failed ({detail}). Details are in caspr.log.")
