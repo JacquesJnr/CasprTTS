@@ -106,6 +106,15 @@ Settings lists them automatically. Some well-known models are shown with a frien
 name, flag and ♂/♀; others appear under their file name. Each voice has its own
 license and attribution; check its model card before sharing recordings.
 
+### Browse Piper voices
+
+Listen to every Piper voice before downloading it on the
+[Piper voice samples](https://rhasspy.github.io/piper-samples/) page. Pick a language,
+voice and quality there, then download the matching `.onnx` and `.onnx.json` files
+from [rhasspy/piper-voices](https://huggingface.co/rhasspy/piper-voices).
+
+### Microsoft voices
+
 **Microsoft voices** (Windows only): Caspr lists the voices Windows offers to apps.
 Windows includes a few (for example David, Zira or Mark); add more, such as James, in
 Windows Settings → Time & language → Speech → **Manage voices**, then restart Caspr.
